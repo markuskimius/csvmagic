@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+
+import sys, os, argparse, importlib
+
+def main():
+    global opts
+
+    parser = argparse.ArgumentParser(description="Display csv rows in a more readable format.")
+    parser.add_argument("files", metavar="FILE", nargs="+", help="csv file to read.")
+    parser.add_argument("-x", "--noheader", dest="has_header", default=True, action="store_false", help="csv file with no header")
+    parser.add_argument("-d", "--delim", dest="delim", default=",", help="Delimiter [default=,]")
+    parser.add_argument("-l", "--lib", dest="lib", default="", help="Translation plugin to use [default=none]")
+    parser.add_argument("-p", "--path", dest="path", default="", help="Path to the translation plugin")
+    opts = parser.parse_args()
+
+    opts.norm_fn = def_norm_fn
+    opts.name_fn = def_name_fn
+    opts.val_fn = def_val_fn
+
+    if(len(opts.path)): sys.path.append(opts.path)
+    if(len(opts.lib)): load_lib(opts.lib)
+
+    for f in opts.files:
+        read_csv(f)
+
+def def_norm_fn(name, value):
+    return (name, value)
+
+def def_name_fn(name, value):
+    return name
+
+def def_val_fn(name, value):
+    return value
+
+def load_lib(path):
+    global opts
+    folder = os.path.dirname(opts.lib)
+    file = os.path.basename(opts.lib)
+
+    # The library is imported from the system path; so we add the library
+    # folder to the system path, load the library, then restore the path.
+    if(len(folder)): sys.path.insert(0, folder)
+    lib = importlib.import_module(file)
+    if(len(folder)): sys.path.pop(0)
+
+    # Load the methods from the library
+    if("normalize" in dir(lib)): opts.norm_fn = lib.normalize
+    if("get_name" in dir(lib)): opts.name_fn = lib.get_name
+    if("get_value" in dir(lib)): opts.val_fn = lib.get_value
+
+def read_csv(file):
+    global opts
+
+    try:
+        fd = open(file, "rt")
+    except IOError as e:
+        print(e)
+        sys.exit(1)
+
+    header = read_header(fd) if(opts.has_header) else []
+    read_body(fd, header)
+
+    fd.close()
+    return True
+
+def read_header(fd):
+    global opts
+
+    # Get the header and calculate max width
+    line = fd.readline()
+    if(line == ""):
+        print("%s: No data" % fd.name)
+        sys.exit(1)
+
+    line = line.splitlines()[0]
+    header = split(line)
+
+    return header
+
+def read_body(fd, header):
+    global opts
+
+    line = fd.readline()
+    while(line != ""):
+        width = 0
+        names = []
+        values = []
+
+        line = line.splitlines()[0]
+        fields = split(line)
+        if(line == ""):
+            line = fd.readline()
+            continue
+
+        # Fields
+        for i in range(max(len(header), len(fields))):
+            name = header[i] if(i < len(header)) else ""
+            value = fields[i] if(i < len(fields)) else ""
+            if(name == "" and value == ""): continue
+
+            # Transform names and values using the translation library
+            name, value = opts.norm_fn(name, value)
+            new_name = opts.name_fn(name, value)
+            new_value = opts.val_fn(name, value)
+
+            names.append(new_name)
+            values.append(new_value)
+            width = max(width, len(new_name))
+
+        # Display
+        for i in range(len(values)):
+            name = names[i]
+            value = values[i]
+            print("%-*s = %s" % (width, name, value))
+
+        # Next!
+        print("")
+        line = fd.readline()
+
+def split(line):
+    global opts
+
+    return line.split(opts.delim)
+
+if __name__ == "__main__":
+    main()
