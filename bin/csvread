@@ -128,4 +128,8 @@ def split(line):
     return line.split(opts.delim)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("")
+        sys.exit(130)
