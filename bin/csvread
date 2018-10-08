@@ -6,7 +6,7 @@ def main():
     global opts
 
     parser = argparse.ArgumentParser(description="Display csv rows in a more readable format.")
-    parser.add_argument("files", metavar="FILE", nargs="+", help="csv file to read.")
+    parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
     parser.add_argument("-x", "--noheader", dest="has_header", default=True, action="store_false", help="csv file with no header")
     parser.add_argument("-d", "--delim", dest="delim", default=",", help="Delimiter [default=,]")
     parser.add_argument("-l", "--lib", dest="lib", default="", help="Translation plugin to use [default=none]")
@@ -20,6 +20,11 @@ def main():
     if(len(opts.path)): sys.path.append(opts.path)
     if(len(opts.lib)): load_lib(opts.lib)
 
+    # Read from STDIN if no file specified
+    if(len(opts.files) == 0):
+        opts.files.append("-")
+
+    # Read each file
     for f in opts.files:
         read_csv(f)
 
@@ -52,7 +57,7 @@ def read_csv(file):
     global opts
 
     try:
-        fd = open(file, "rt")
+        fd = sys.stdin if(file == "-") else open(file, "rt")
     except IOError as e:
         print(e)
         sys.exit(1)
@@ -60,8 +65,8 @@ def read_csv(file):
     header = read_header(fd) if(opts.has_header) else []
     read_body(fd, header)
 
-    fd.close()
-    return True
+    if(file != "-"):
+        fd.close()
 
 def read_header(fd):
     global opts
