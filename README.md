@@ -7,6 +7,25 @@ This tool solves the problem with a csv file's readability:
 
 This script addresses these readability problems.
 
+## Usage
+
+```
+usage: csvread [-h] [-x] [-d DELIM] [-l LIB] [-p PATH] [FILE [FILE ...]]
+
+Display csv rows in a more readable format.
+
+positional arguments:
+  FILE                  csv file(s) to read.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -x, --noheader        csv file with no header
+  -d DELIM, --delim DELIM
+                        Delimiter [default=,]
+  -l LIB, --lib LIB     Translation plugin to use [default=none]
+  -p PATH, --path PATH  Path to the translation plugin
+```
+
 ## Example
 
 Given the following csv file,
