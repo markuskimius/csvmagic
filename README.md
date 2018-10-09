@@ -19,7 +19,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -x, --noheader        csv file with no header
+  -x, --no-header       csv file with no header
   -d DELIM, --delim DELIM
                         Delimiter [default=,]
   -l LIB, --lib LIB     Translation plugin to use [default=none]

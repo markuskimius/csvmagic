@@ -7,7 +7,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Display csv rows in a more readable format.")
     parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
-    parser.add_argument("-x", "--noheader", dest="has_header", default=True, action="store_false", help="csv file with no header")
+    parser.add_argument("-x", "--no-header", dest="has_header", default=True, action="store_false", help="csv file with no header")
     parser.add_argument("-d", "--delim", dest="delim", default=",", help="Delimiter [default=,]")
     parser.add_argument("-l", "--lib", dest="lib", default="", help="Translation plugin to use [default=none]")
     parser.add_argument("-p", "--path", dest="path", default="", help="Path to the translation plugin")
