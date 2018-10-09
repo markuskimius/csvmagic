@@ -10,7 +10,7 @@ This script addresses these readability problems.
 ## Usage
 
 ```
-usage: csvread [-h] [-x] [-d DELIM] [-l LIB] [-p PATH] [FILE [FILE ...]]
+usage: csvread [-h] [-n] [-d DELIM] [-l LIB] [-p PATH] [FILE [FILE ...]]
 
 Display csv rows in a more readable format.
 
@@ -19,7 +19,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -x, --no-header       csv file with no header
+  -n, --no-header       csv file with no header; use column number instead.
   -d DELIM, --delim DELIM
                         Delimiter [default=,]
   -l LIB, --lib LIB     Translation plugin to use [default=none]

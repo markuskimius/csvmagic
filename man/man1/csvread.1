@@ -2,7 +2,7 @@
 .SH NAME
 csvread \- print csv rows in a human\-readable format
 .SH SYNOPSIS
-\fBcsvread\fP [\-h] [\-x] [\-d \fIDELIM\fP] [\-l \fILIB\fP] [\-p \fIPATH\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvread\fP [\-h] [\-n] [\-d \fIDELIM\fP] [\-l \fILIB\fP] [\-p \fIPATH\fP] [\fIFILE\fP [\fIFILE\fP ...]]
 .SH DESCRIPTION
 \fBcsvread\fP displays a comma\-separated value (csv) file \fIFILE\fP in a more
 readable format.  It prints one value per line, prefixed by the header that
@@ -20,7 +20,7 @@ look for records containing certain values in certain columns.
 \fB-h\fP, \fB--help\fP
 Output a usage message and exit.
 .TP
-\fB-x\fP, \fB--no-header\fP
+\fB-n\fP, \fB--no-header\fP
 The file contains no header.  The values are numbered by their column positions
 instead.
 .TP
@@ -38,7 +38,7 @@ are searched.
 Search for the plugin library in \fIPATH\fP.
 .SS Variables
 .TP
-\fBPYTHONPATH\fP
+\fBCSV_LIBRARY_PATH\fP
 A colon-separated list of directories in which the plugin library is searched.
 .SH "SEE ALSO"
 cgrep(1)

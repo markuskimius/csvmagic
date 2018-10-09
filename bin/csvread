@@ -5,9 +5,14 @@ import sys, os, argparse, importlib
 def main():
     global opts
 
+    # Set up the library search path
+    for path in os.getenv("CSV_LIBRARY_PATH").split(":"):
+        if(path != None): sys.path.append(path)
+
+    # Parse arguments
     parser = argparse.ArgumentParser(description="Display csv rows in a more readable format.")
     parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
-    parser.add_argument("-x", "--no-header", dest="has_header", default=True, action="store_false", help="csv file with no header")
+    parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false", help="csv file with no header; use column number instead.")
     parser.add_argument("-d", "--delim", dest="delim", default=",", help="Delimiter [default=,]")
     parser.add_argument("-l", "--lib", dest="lib", default="", help="Translation plugin to use [default=none]")
     parser.add_argument("-p", "--path", dest="path", default="", help="Path to the translation plugin")
@@ -17,7 +22,7 @@ def main():
     opts.name_fn = def_name_fn
     opts.val_fn = def_val_fn
 
-    if(len(opts.path)): sys.path.append(opts.path)
+    if(len(opts.path)): sys.path.insert(0, opts.path)
     if(len(opts.lib)): load_lib(opts.lib)
 
     # Read from STDIN if no file specified
@@ -107,6 +112,9 @@ def read_body(fd, header):
             name, value = opts.norm_fn(name, value)
             new_name = opts.name_fn(name, value)
             new_value = opts.val_fn(name, value)
+
+            # Use column # as the header if it's blank
+            if(new_name == "" and opts.has_header == False): new_name = str(i+1)
 
             names.append(new_name)
             values.append(new_value)
