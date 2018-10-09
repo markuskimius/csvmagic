@@ -32,6 +32,21 @@ EMAIL = jane@email.com
 TEL   = 222-222-2222
 ```
 
+If the file uses an alternate delimiter (say, a tab):
+```sh
+$ csvread -d'<ctrl-v><tab>' names.csv
+ID    = 1
+NAME  = John
+EMAIL = john@email.com
+TEL   = 111-111-1111
+
+ID    = 2
+NAME  = Jane
+EMAIL = jane@email.com
+TEL   = 222-222-2222
+```
+(press &lt;ctrl-v&gt; followed by &lt;tab&gt;)
+
 The output can be piped to [cgrep] to filter records by its field value:
 ```sh
 $ csvread names.csv | cgrep "^NAME *= John$"
