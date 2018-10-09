@@ -4,18 +4,25 @@ import sys, os, argparse, importlib
 
 def main():
     global opts
+    CSV_LIBRARY_PATH = os.getenv("CSV_LIBRARY_PATH") or ""
 
     # Set up the library search path
-    for path in os.getenv("CSV_LIBRARY_PATH").split(":"):
-        if(path != None): sys.path.append(path)
+    for path in CSV_LIBRARY_PATH.split(":"):
+        sys.path.append(path)
 
     # Parse arguments
-    parser = argparse.ArgumentParser(description="Display csv rows in a more readable format.")
+    parser = argparse.ArgumentParser(
+        description="Display csv rows in a more readable format.",
+        epilog="To use libraries without specifying its full path as a part of the command, "
+        "set the CSV_LIBRARY_PATH environment variable.")
     parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
-    parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false", help="csv file with no header; use column number instead.")
-    parser.add_argument("-d", "--delim", dest="delim", default=",", help="Delimiter [default=,]")
-    parser.add_argument("-l", "--lib", dest="lib", default="", help="Translation plugin to use [default=none]")
-    parser.add_argument("-p", "--path", dest="path", default="", help="Path to the translation plugin")
+    parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false",
+        help="File has no header; use column number as header.")
+    parser.add_argument("-d", "--delim", dest="delim", default=",",
+        help="Use DELIM instead of comma to delimit values.")
+    parser.add_argument("-l", "--lib", dest="lib", default="",
+        help="Use LIB to preprocess headers and/or values before display.")
+    parser.add_argument("-p", "--path", dest="path", default="", help="Plugin library search path.")
     opts = parser.parse_args()
 
     opts.norm_fn = def_norm_fn
