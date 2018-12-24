@@ -49,7 +49,7 @@ TEL   : 222-222-2222
 
 The output can be piped to [cgrep] to filter records by its field value:
 ```sh
-$ csvread names.csv | cgrep "^NAME *= John$"
+$ csvread names.csv | cgrep "^NAME *: John$"
 ID    : 1
 NAME  : John
 EMAIL : john@email.com
