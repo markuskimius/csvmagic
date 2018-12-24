@@ -21,15 +21,15 @@ ID,NAME,EMAIL,TEL
 Running csvread on it gives the following output:
 ```sh
 $ csvread names.csv
-ID    ; 1
-NAME  ; John
-EMAIL ; john@email.com
-TEL   ; 111-111-1111
+ID    : 1
+NAME  : John
+EMAIL : john@email.com
+TEL   : 111-111-1111
 
-ID    ; 2
-NAME  ; Jane
-EMAIL ; jane@email.com
-TEL   ; 222-222-2222
+ID    : 2
+NAME  : Jane
+EMAIL : jane@email.com
+TEL   : 222-222-2222
 ```
 
 If the file uses an alternate delimiter (say, a tab):
