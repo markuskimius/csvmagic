@@ -25,6 +25,9 @@ def main():
     parser.add_argument("-p", "--path", dest="path", default="", help="Plugin library search path.")
     opts = parser.parse_args()
 
+    # Delimiter may contain escape characters
+    opts.delim = bytes(opts.delim, "utf-8").decode("unicode_escape")
+
     opts.norm_fn = def_norm_fn
     opts.name_fn = def_name_fn
     opts.val_fn = def_val_fn
