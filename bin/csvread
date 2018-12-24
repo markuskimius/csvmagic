@@ -131,7 +131,7 @@ def read_body(fd, header):
         for i in range(len(values)):
             name = names[i]
             value = values[i]
-            print("%-*s = %s" % (width, name, value))
+            print("%-*s : %s" % (width, name, value))
 
         # Next!
         print("")
