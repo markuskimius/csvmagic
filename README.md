@@ -60,7 +60,7 @@ NAME
        csvread - print csv rows in a human-readable format
 
 SYNOPSIS
-       csvread [-h] [-n] [-d DELIM] [-l LIB] [-p PATH] [FILE [FILE ...]]
+       csvread [-h] [-s] [-n] [-d DELIM] [-l LIB] [-p PATH] [FILE [FILE ...]]
 
 DESCRIPTION
        csvread  displays  a  comma-separated value (csv) file FILE in a more readable format.  It
@@ -77,6 +77,9 @@ DESCRIPTION
    Options
        -h, --help
               Output a usage message and exit.
+
+       -s, --strip-quotes
+              Strip quotes from field values.
 
        -n, --no-header
               The file contains no header.  The values are numbered  by  their  column  positions

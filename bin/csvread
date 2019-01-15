@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, os, argparse, importlib
+import sys, os, re, argparse, importlib
 
 def main():
     global opts
@@ -16,17 +16,23 @@ def main():
         epilog="To use libraries without specifying its full path as a part of the command, "
         "set the CSV_LIBRARY_PATH environment variable.")
     parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
-    parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false",
-        help="File has no header; use column number as header.")
-    parser.add_argument("-d", "--delim", dest="delim", default=",",
-        help="Use DELIM instead of comma to delimit values.")
-    parser.add_argument("-l", "--lib", dest="lib", default="",
-        help="Use LIB to preprocess headers and/or values before display.")
+    parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false", help="File has no header; use column number as header.")
+    parser.add_argument("-s", "--strip-quotes", dest="strip_quotes", default=False, action="store_true", help="Strip quotes around each field.")
+    parser.add_argument("-d", "--delim", dest="delim", default=",", help="Use DELIM instead of comma to delimit values.")
+    parser.add_argument("-l", "--lib", dest="lib", default="", help="Use LIB to preprocess headers and/or values before display.")
     parser.add_argument("-p", "--path", dest="path", default="", help="Plugin library search path.")
     opts = parser.parse_args()
 
     # Delimiter may contain escape characters
     opts.delim = bytes(opts.delim, "utf-8").decode("unicode_escape")
+
+    # Regex to match fields and rows
+    unquoted_field_re = r'[^,"]*'
+    quoted_field_re = r'"(?:[^"]|"")*"'
+    field_re = r'(?:%s)|(?:%s)' % (unquoted_field_re, quoted_field_re)
+    row_re = r'(?:%s)(?:%s(?:%s))*' % (field_re, re.escape(opts.delim), field_re)
+    opts.match_field = re.compile(r'^(%s)$' % field_re)
+    opts.match_row = re.compile(r'^(%s)$' % row_re)
 
     opts.norm_fn = def_norm_fn
     opts.name_fn = def_name_fn
@@ -87,26 +93,25 @@ def read_header(fd):
     global opts
 
     # Get the header and calculate max width
-    line = fd.readline()
+    line = read_row(fd)
     if(line == ""):
         print("%s: No data" % fd.name)
         sys.exit(1)
 
-    line = line.splitlines()[0]
-    header = split(line)
+    header = split(chomp(line))
 
     return header
 
 def read_body(fd, header):
     global opts
 
-    line = fd.readline()
+    line = read_row(fd)
     while(line != ""):
         width = 0
         names = []
         values = []
 
-        line = line.splitlines()[0]
+        line = chomp(line)
         fields = split(line)
         if(line == ""):
             line = fd.readline()
@@ -140,10 +145,58 @@ def read_body(fd, header):
         print("")
         line = fd.readline()
 
+def read_row(fd):
+    global opts
+    row_re = opts.match_row
+    line = ""
+
+    while(True):
+        next = fd.readline()
+
+        # Break on EOF
+        if(next == ""): break
+
+        line += next
+
+        # Break on valid row
+        if(row_re.match(line)): break
+
+    return line
+
+def chomp(line):
+    return line.rstrip('\n')
+
 def split(line):
     global opts
+    field_re = opts.match_field
+    delim = opts.delim
 
-    return line.split(opts.delim)
+    rawfields = line.split(delim)
+    fields = []
+    last = ""
+
+    # Join fields containing delimiters
+    for f in rawfields:
+        if len(last):
+            last += delim + f
+
+            if(field_re.match(last)):
+                fields.append(last)
+                last = ""
+        elif field_re.match(f):
+            fields.append(f)
+        else:
+            last = f
+
+    # Clean up
+    if len(last):
+        fields.append(last)
+
+    # Strip quotes if requested
+    if opts.strip_quotes:
+        fields = list(map(lambda x: field_re.sub(r'\1', x), fields))
+
+    return fields
 
 if __name__ == "__main__":
     try:
