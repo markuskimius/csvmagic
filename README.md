@@ -1,5 +1,5 @@
 # csvread
-A command line utility to display csv rows in a human-readable format.
+A command line utility to display csv rows in a more human-readable format.
 
 ## Statement of Problem
 
