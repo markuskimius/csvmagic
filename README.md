@@ -57,7 +57,7 @@ TEL   : 111-111-1111
 ## Usage
 ```
 NAME
-       csvread - print csv rows in a human-readable format
+       csvread - print csv rows in a more human-readable format
 
 SYNOPSIS
        csvread [-h] [-s] [-n] [-d DELIM] [-l LIB] [-p PATH] [FILE [FILE ...]]
