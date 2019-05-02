@@ -27,7 +27,7 @@ def main():
     opts.delim = bytes(opts.delim, "utf-8").decode("unicode_escape")
 
     # Regex to match fields and rows
-    unquoted_field_re = r'[^,"]*'
+    unquoted_field_re = r'[^%s"]*' % opts.delim
     quoted_field_re = r'"(?:[^"]|"")*"'
     field_re = r'(?:%s)|(?:%s)' % (unquoted_field_re, quoted_field_re)
     row_re = r'(?:%s)(?:%s(?:%s))*' % (field_re, re.escape(opts.delim), field_re)
@@ -93,7 +93,7 @@ def read_csv(file):
 def read_header(fd):
     global opts
 
-    # Get the header and calculate max width
+    # Get the header
     line = read_row(fd)
     if(line == ""):
         print("%s: No data" % fd.name)
@@ -144,7 +144,7 @@ def read_body(fd, header):
 
         # Next!
         print("")
-        line = fd.readline()
+        line = read_row(fd)
 
 def read_row(fd):
     global opts
