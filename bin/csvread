@@ -25,10 +25,18 @@ def main():
     parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
     parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false", help="File has no header; use column number as header.")
     parser.add_argument("-s", "--strip-quotes", dest="strip_quotes", default=False, action="store_true", help="Strip quotes around each field.")
-    parser.add_argument("-d", "--delim", dest="delim", default=",", help="Use DELIM instead of comma to delimit values.")
+    parser.add_argument("-d", "--delim", dest="delim", default=",", help="Use DELIM instead of comma to delimit values. May be 'p' for pipe, 't' for tab, and 'a' for SOH.")
     parser.add_argument("-l", "--lib", dest="lib", default="", help="Use LIB to preprocess headers and/or values before display.")
     parser.add_argument("-p", "--path", dest="path", default="", help="Plugin library search path.")
     opts = parser.parse_args()
+
+    # Delimiters may use shorthands
+    if opts.delim in ('p'):
+        opts.delim = '|'
+    elif opts.delim in ('t'):
+        opts.delim = '\t'
+    elif opts.delim in ('a'):
+        opts.delim = '\u0001'
 
     # Delimiter may contain escape characters
     opts.delim = bytes(opts.delim, "utf-8").decode("unicode_escape")

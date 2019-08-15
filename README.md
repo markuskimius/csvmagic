@@ -86,18 +86,20 @@ DESCRIPTION
               instead.
 
        -d DELIM, --delim=DELIM
-              Use DELIM as the value delimiter instead of a comma.
+              Use DELIM as the value delimiter instead of the comma, where DELIM may be p for the
+              pipe (|), t for the tab (\t), a for the SOH (ASCII 1), or other string  literal  of
+              one or more characters and Python string escape sequences.
 
        -l LIB, --lib=LIB
               Use  the  plugin  library LIB to preprocess header(s) and/or values before display.
-              Useful for enriching symbols in values or headers with a description of their mean‐
+              Useful for enriching symbols in values or headers with a description of their mean-
               ing.   LIB may be a full path to the library without the .py suffix, or it may just
               be the library name in which case the appropriate paths are searched.
 
        -p PATH, --path=PATH
               Search for the plugin library in PATH.
 
-   Variables
+   Environment Variables
        CSV_LIBRARY_PATH
               A colon-separated list of directories in which the plugin library is searched.
 

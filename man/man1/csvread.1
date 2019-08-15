@@ -28,7 +28,10 @@ The file contains no header.  The values are numbered by their column positions
 instead.
 .TP
 \fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
-Use \fIDELIM\fP as the value delimiter instead of a comma.
+Use \fIDELIM\fP as the value delimiter instead of the comma, where \fIDELIM\fP
+may be \fBp\fP for the pipe (\fB|\fP), \fBt\fP for the tab (\fB\\t\fP), \fBa\fP
+for the SOH (ASCII 1), or other string literal of one or more characters and
+Python string escape sequences.
 .TP
 \fB-l\fP \fILIB\fP, \fB--lib\fP=\fILIB\fP
 Use the plugin library \fILIB\fP to preprocess header(s) and/or values before
@@ -39,7 +42,7 @@ are searched.
 .TP
 \fB-p\fP \fIPATH\fP, \fB--path\fP=\fIPATH\fP
 Search for the plugin library in \fIPATH\fP.
-.SS Variables
+.SS Environment Variables
 .TP
 \fBCSV_LIBRARY_PATH\fP
 A colon-separated list of directories in which the plugin library is searched.
