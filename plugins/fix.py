@@ -1,5 +1,11 @@
-######################################################################
-# csvread plugin for translating Financial Information eXchange (FIX) protocol.
+"""csvread plugin for translating Financial Information eXchange (FIX) protocol.
+
+https://github.com/markuskimius/csvread
+"""
+
+__copyright__ = "Copyright 2018-2019, Mark Kim"
+__license__ = "Apache 2.0"
+
 
 def normalize(name, value):
     if(value.find("=") >= 0):
@@ -33979,3 +33985,5 @@ market_map = {
     ("MIC","ZKBX"): "ZKBX .. ZURCHER KANTONALBANK SECURITIES EXCHANGE",
     ("MIC","ZOBX"): "ZOBX .. ZOBEX"
 }
+
+# vim:ft=python
