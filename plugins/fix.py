@@ -3,7 +3,7 @@
 https://github.com/markuskimius/csvread
 """
 
-__copyright__ = "Copyright 2018-2019, Mark Kim"
+__copyright__ = "Copyright 2018-2019 Mark Kim"
 __license__ = "Apache 2.0"
 
 

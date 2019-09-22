@@ -6,7 +6,7 @@ https://github.com/markuskimius/csvread
 
 import sys, os, errno, re, argparse, importlib
 
-__copyright__ = "Copyright 2018-2019, Mark Kim"
+__copyright__ = "Copyright 2018-2019 Mark Kim"
 __license__ = "Apache 2.0"
 
 def main():
