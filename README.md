@@ -1,4 +1,4 @@
-# csvread
+# csvutils
 Command line utilities to work with csv files.
 
 ## Contents
