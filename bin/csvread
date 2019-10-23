@@ -1,219 +1,220 @@
-#!/usr/bin/env python3
-"""A command line utility to display csv rows in a more human-readable format.
+#!/bin/sh
 
-https://github.com/markuskimius/csvread
-"""
+##############################################################################
+# Print csv rows in a more human-readable format
+#
 
-import sys, os, errno, re, argparse, importlib
+##############################################################################
+# BOOTSTRAP
+#
+# Include ../lib in the search path before calling python.
+# (Thanks to https://unix.stackexchange.com/questions/20880)
+#
+if "true" : '''\'
+then
+    export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
 
-__copyright__ = "Copyright 2018-2019 Mark Kim"
-__license__ = "Apache 2.0"
+    if [ -n "$CSV_PLUGINS_PATH" ]; then
+        export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
+    fi
+
+    exec python3 "$0" "$@"
+    exit 127
+fi
+'''
+
+##############################################################################
+# PYTHON CODE BEGINS HERE
+
+import os
+import sys
+import libcsv
+import getopts
+import importlib
+
+__copyright__ = 'Copyright 2019 Mark Kim'
+__license__ = 'Apache 2.0'
+
+
+##############################################################################
+# GLOBALS
+
+SCRIPTNAME = os.path.basename(__file__)
+
+class opts:
+    files = []
+    delim = None
+    has_header = True
+    strip_quotes = False
+    translator = None
+
+
+##############################################################################
+# USAGE
+
+def usage():
+    '''\
+Print csv rows in a more human-readable format.
+
+usage: {SCRIPTNAME} [OPTIONS] [FILES]
+
+Options:
+  FILE                  csv file(s) to read.
+
+  -n, --no-header       The file contains no header.  The values are numbered
+                        by their column positions instead.
+  -s, --strip-quotes    Strip quotes from field values.
+  -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
+                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
+                        the SOH (ASCII 1), or other string literal of one or
+                        more characters and Python  string  escape  sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
+  -t, --translator=LIB  Use the plugin library LIB to preprocess the values
+                        before display.  LIB may be the full  path  to  the
+                        library  without  the  .py suffix, or it may just be
+                        the library name in which case CSV_PLUGINS_PATH is
+                        searched for the library.
+
+Environment Variables:
+  CSV_DELIMS            A set of characters used to guess the delimiter of a
+                        csv file.  The guesswork happens when reading  the
+                        first  line  of  the first FILE, by testing each
+                        character present in CSV_DELIMS for the character with
+                        the most occurrence in the line.  If any of the
+                        characters occur the same number  of  times  (including
+                        zero),  the  earlier  character  in the variable is
+                        chosen.  If the environment variable is not set, it
+                        defaults to '{libcsv.DELIMS}'.  CSV_DELIMS may include
+                        escape characters.
+
+  CSV_PLUGINS_PATH      A colon-separated list of directories in which the
+                        plugin library is searched.
+'''
+
+    print(usage.__doc__.format(**globals()))
+
+
+##############################################################################
+# MAIN
 
 def main():
-    global opts
-    CSV_LIBRARY_PATH = os.getenv("CSV_LIBRARY_PATH") or ""
+    errcount = 0
 
-    # Set up the library search path
-    for path in CSV_LIBRARY_PATH.split(":"):
-        sys.path.append(path)
+    getopt = getopts.getopts(sys.argv, {
+        'n' : 0, 'no-header'    : 0,
+        's' : 0, 'strip-quotes' : 0,
+        'd' : 1, 'delim'        : 1,
+        't' : 1, 'translator'   : 1,
+        'h' : 0, 'help'         : 0,
+    })
 
-    # Parse arguments
-    parser = argparse.ArgumentParser(
-        description="Display csv rows in a more readable format.",
-        epilog="To use libraries without specifying its full path as a part of the command, "
-        "set the CSV_LIBRARY_PATH environment variable.")
-    parser.add_argument("files", metavar="FILE", nargs="*", help="csv file(s) to read.")
-    parser.add_argument("-n", "--no-header", dest="has_header", default=True, action="store_false", help="File has no header; use column number as header.")
-    parser.add_argument("-s", "--strip-quotes", dest="strip_quotes", default=False, action="store_true", help="Strip quotes around each field.")
-    parser.add_argument("-d", "--delim", dest="delim", default=",", help="Use DELIM instead of comma to delimit values. May be 'p' for pipe, 't' for tab, and 'a' for SOH.")
-    parser.add_argument("-l", "--lib", dest="lib", default="", help="Use LIB to preprocess headers and/or values before display.")
-    parser.add_argument("-p", "--path", dest="path", default="", help="Plugin library search path.")
-    opts = parser.parse_args()
+    for c in getopt:
+        if c in ('-')                   : opts.files.append(getopt.optarg)
+        elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('n', 'no-header')    : opts.has_header = False
+        elif c in ('s', 'strip-quotes') : opts.strip_quotes = True
+        elif c in ('t', 'translator')   : opts.translator = getopt.optarg
+        elif c in ('h', 'help')         : usage(); sys.exit(0)
+        else                            : errcount += 1
 
-    # Delimiters may use shorthands
-    if opts.delim in ('p'):
-        opts.delim = '|'
-    elif opts.delim in ('t'):
-        opts.delim = '\t'
-    elif opts.delim in ('a'):
-        opts.delim = '\u0001'
-
-    # Delimiter may contain escape characters
-    opts.delim = bytes(opts.delim, "utf-8").decode("unicode_escape")
-
-    # Regex to match fields and rows
-    unquoted_field_re = r'[^%s"]*' % opts.delim
-    quoted_field_re = r'"(?:[^"]|"")*"'
-    field_re = r'(?:%s)|(?:%s)' % (unquoted_field_re, quoted_field_re)
-    row_re = r'(?:%s)(?:%s(?:%s))*' % (field_re, re.escape(opts.delim), field_re)
-    opts.match_field = re.compile(r'^(%s)$' % field_re)
-    opts.match_row = re.compile(r'^(%s)$' % row_re)
-    opts.match_quoted_field = re.compile(r'^"(.*)"$')
-
-    opts.norm_fn = def_norm_fn
-    opts.name_fn = def_name_fn
-    opts.val_fn = def_val_fn
-
-    if(len(opts.path)): sys.path.insert(0, opts.path)
-    if(len(opts.lib)): load_lib(opts.lib)
+    # Sanity check
+    if errcount:
+        sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
+        sys.exit(1)
 
     # Read from STDIN if no file specified
-    if(len(opts.files) == 0):
+    if not opts.files:
         opts.files.append("-")
+
+    # Load the translator
+    if opts.translator:
+        opts.translator = importlib.import_module(opts.translator)
+    else:
+        opts.translator = DefaultTranslatorModule
 
     # Read each file
     for f in opts.files:
-        read_csv(f)
+        with smart_open(f) as fo:
+            csvread(fo)
 
-def def_norm_fn(name, value):
-    return (name, value)
 
-def def_name_fn(name, value):
-    return name
+def arg_to_delim(delim):
+    # Delimiter shorthands
+    if delim in ('p'): delim = '|'
+    elif delim in ('t'): delim = '\t'
+    elif delim in ('a'): delim = '\u0001'
 
-def def_val_fn(name, value):
-    return value
+    # Translate escape characters
+    delim = delim.encode().decode('unicode_escape')
 
-def load_lib(path):
-    global opts
-    folder = os.path.dirname(opts.lib)
-    file = os.path.basename(opts.lib)
+    return delim
 
-    # The library is imported from the system path; so we add the library
-    # folder to the system path, load the library, then restore the path.
-    if(len(folder)): sys.path.insert(0, folder)
-    lib = importlib.import_module(file)
-    if(len(folder)): sys.path.pop(0)
 
-    # Load the methods from the library
-    if("normalize" in dir(lib)): opts.norm_fn = lib.normalize
-    if("get_name" in dir(lib)): opts.name_fn = lib.get_name
-    if("get_value" in dir(lib)): opts.val_fn = lib.get_value
+def smart_open(filename, mode='r'):
+    '''Open a file for reading, treating '-' as a stdin or stdout, depending on
+    the mode.'''
 
-def read_csv(file):
-    global opts
+    if filename == '-':
+        # Duplicate stdin/stdout so the caller can close it without closing stdin.
+        fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
+        fo = os.fdopen(os.dup(fd))
+    else:
+        fo = open(filename, mode)
 
-    try:
-        fd = sys.stdin if(file == "-") else open(file, "rt")
-    except IOError as e:
-        print(e, file=sys.stderr)
-        sys.exit(1)
+    return fo
 
-    header = read_header(fd) if(opts.has_header) else []
-    read_body(fd, header)
 
-    if(file != "-"):
-        fd.close()
+def csvread(file):
+    reader = libcsv.Reader(file, delim=opts.delim, has_header=opts.has_header)
+    translator = opts.translator.Translator()
 
-def read_header(fd):
-    global opts
+    for row in reader:
+        cell_list = []
+        has_name = False
 
-    # Get the header
-    line = read_row(fd)
-    if(line == ""):
-        print("%s: No data" % fd.name)
-        sys.exit(1)
+        # Translate the cells
+        for cell in row:
+            if opts.translator:
+                cell = translator(cell)
 
-    header = split(chomp(line))
+            if cell.colname():
+                has_name = True
 
-    return header
+            cell_list.append(cell)
 
-def read_body(fd, header):
-    global opts
-
-    line = read_row(fd)
-    while(line != ""):
-        width = 0
-        names = []
-        values = []
-
-        line = chomp(line)
-        fields = split(line)
-        if(line == ""):
-            line = fd.readline()
-            continue
-
-        # Fields
-        for i in range(max(len(header), len(fields))):
-            name = header[i] if(i < len(header)) else ""
-            value = fields[i] if(i < len(fields)) else ""
-            if(name == "" and value == ""): continue
-
-            # Transform names and values using the translation library
-            name, value = opts.norm_fn(name, value)
-            new_name = opts.name_fn(name, value)
-            new_value = opts.val_fn(name, value)
-
-            # Use column # as the header if it's blank
-            if(new_name == "" and opts.has_header == False): new_name = str(i+1)
-
-            names.append(new_name)
-            values.append(new_value)
-            width = max(width, len(new_name))
-
-        # Display
-        for i in range(len(values)):
-            name = names[i]
-            value = values[i]
-            print("%-*s : %s" % (width, name, value))
-
-        # Next!
-        print("")
-        line = read_row(fd)
-
-def read_row(fd):
-    global opts
-    row_re = opts.match_row
-    line = ""
-
-    while(True):
-        next = fd.readline()
-
-        # Break on EOF
-        if(next == ""): break
-
-        line += next
-
-        # Break on valid row
-        if(row_re.match(line)): break
-
-    return line
-
-def chomp(line):
-    return line.rstrip('\n')
-
-def split(line):
-    global opts
-    field_re = opts.match_field
-    quoted_field_re = opts.match_quoted_field
-    delim = opts.delim
-
-    rawfields = line.split(delim)
-    fields = []
-    last = ""
-
-    # Join fields containing delimiters
-    for f in rawfields:
-        if len(last):
-            last += delim + f
-
-            if(field_re.match(last)):
-                fields.append(last)
-                last = ""
-        elif field_re.match(f):
-            fields.append(f)
+        # Calculate the width
+        if has_name:
+            width = max(len(cell.colname() or '') for cell in cell_list)
         else:
-            last = f
+            width = len(str(len(cell_list)))
 
-    # Clean up
-    if len(last):
-        fields.append(last)
+        # Print each cell
+        for cell in cell_list:
+            if has_name:
+                colname = cell.colname() or ''
+            else:
+                colname = cell.colnum()+1
 
-    # Strip quotes if requested
-    if opts.strip_quotes:
-        fields = list(map(lambda x: quoted_field_re.sub(r'\1', x), fields))
+            if opts.strip_quotes:
+                val = cell.stripped()
+            else:
+                val = cell.value()
 
-    return fields
+            print('%-*s : %s' % (width, colname, val))
+
+        print('')
+
+
+class DefaultTranslatorModule(object):
+    class Translator(object):
+        def __call__(self, cell):
+            return cell
+
+
+##############################################################################
+# ENTRY POINT
 
 if __name__ == "__main__":
     try:

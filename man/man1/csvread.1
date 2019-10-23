@@ -2,49 +2,53 @@
 .SH NAME
 csvread \- print csv rows in a more human\-readable format
 .SH SYNOPSIS
-\fBcsvread\fP [\-h] [-s] [\-n] [\-d \fIDELIM\fP] [\-l \fILIB\fP] [\-p \fIPATH\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvread\fP [\-h] [\-n] [\-s] [\-d \fIDELIM\fP] [\-t \fILIB\fP] [\fIFILE\fP [\fIFILE\fP ...]]
 .SH DESCRIPTION
 \fBcsvread\fP displays a comma\-separated value (csv) file \fIFILE\fP in a more
-readable format.  It prints one value per line, prefixed by the header that
-corresponds to the value's column, where the header is the first row of the
-file and is not printed separately.  An empty line is printed between the last
-value of each row and the first value of the next row, serving as a record
-separator.
+readable format.  It prints one value per line, prefixed by the column name.
+An empty line is printed between the records to serve as the record separator.
 
-This purpose of this layout is to make it clear which values in the file
-correspond to which headers.  The layout can also be used to grep for a
-specific column or columns.  Piping its output to cgrep(1), the layout can
-look for records containing certain values in certain columns.
+This purpose of this layout is to make it easier to associate each value with
+its column.  The layout can also be used to grep for a specific column or
+columns.  Its output can be piped to cgrep(1) to look for records containing a
+value in a specific column.
 .SS Options
 .TP
 \fB-h\fP, \fB--help\fP
 Output a usage message and exit.
 .TP
-\fB-s\fP, \fB--strip-quotes\fP
-Strip quotes from field values.
-.TP
 \fB-n\fP, \fB--no-header\fP
 The file contains no header.  The values are numbered by their column positions
 instead.
 .TP
+\fB-s\fP, \fB--strip-quotes\fP
+Strip quotes from field values.
+.TP
 \fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
-Use \fIDELIM\fP as the value delimiter instead of the comma, where \fIDELIM\fP
-may be \fBp\fP for the pipe (\fB|\fP), \fBt\fP for the tab (\fB\\t\fP), \fBa\fP
-for the SOH (ASCII 1), or other string literal of one or more characters and
-Python string escape sequences.
+Use \fIDELIM\fP as the value delimiter, where \fIDELIM\fP may be '\fBp\fP' for
+the pipe (\fB|\fP), '\fBt\fP' for the tab (\fB\\t\fP), '\fBa\fP' for the SOH
+(ASCII 1), or other string literal of one or more characters and Python string
+escape sequences.  \fIDELIM\fP may include escape characters.  By default the
+delimiter is guessed from the characters in the \fBCSV_DELIMS\fP environment
+variable.
 .TP
-\fB-l\fP \fILIB\fP, \fB--lib\fP=\fILIB\fP
-Use the plugin library \fILIB\fP to preprocess header(s) and/or values before
-display.  Useful for enriching symbols in values or headers with a description
-of their meaning.  \fILIB\fP may be a full path to the library without the .py
-suffix, or it may just be the library name in which case the appropriate paths
-are searched.
-.TP
-\fB-p\fP \fIPATH\fP, \fB--path\fP=\fIPATH\fP
-Search for the plugin library in \fIPATH\fP.
+\fB-t\fP \fILIB\fP, \fB--translator\fP=\fILIB\fP
+Use the plugin library \fILIB\fP to preprocess the values before display.
+\fILIB\fP may be the full path to the library without the .py suffix, or it may
+just be the library name in which case \fBCSV_PLUGINS_PATH\fP is searched for
+the library.
 .SS Environment Variables
 .TP
-\fBCSV_LIBRARY_PATH\fP
+\fBCSV_DELIMS\fP
+A set of characters used to guess the delimiter of a csv file.  The guesswork
+happens when reading the first line of the first \fIFILE\fP, by testing each
+character present in \fBCSV_DELIMS\fP for the character with the most
+occurrence in the line.  If any of the characters occur the same number of
+times (including zero), the earlier character in the variable is chosen.
+If the environment variable is not set, it defaults to ',\\t|\\x0001'.
+\fBCSV_DELIMS\fP may include escape characters.
+.TP
+\fBCSV_PLUGINS_PATH\fP
 A colon-separated list of directories in which the plugin library is searched.
 .SH "SEE ALSO"
 cgrep(1)

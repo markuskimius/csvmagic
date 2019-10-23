@@ -1,0 +1,3 @@
+[submodule "lib/getopt-py"]
+	path = lib/getopt-py
+	url = https://github.com/markuskimius/getopt-py.git
