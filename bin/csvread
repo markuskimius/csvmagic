@@ -18,7 +18,7 @@ then
         export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
     fi
 
-    exec python3 "$0" "$@"
+    exec python "$0" "$@"
     exit 127
 fi
 '''
