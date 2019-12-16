@@ -182,6 +182,7 @@ def csvread(file):
     reader = libcsv.Reader(file, delim=opts.delim, has_header=opts.has_header)
     translator = opts.translator.Translator()
 
+    # Data rows
     for row in reader:
         cell_list = []
         has_name = False
