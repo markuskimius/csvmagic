@@ -13,6 +13,7 @@
 if "true" : '''\'
 then
     export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+    export PYTHONPATH="$(dirname $0)/../plugins:$PYTHONPATH"
 
     if [ -n "$CSV_PLUGINS_PATH" ]; then
         export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
