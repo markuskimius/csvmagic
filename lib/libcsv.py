@@ -22,16 +22,29 @@ DELIMS = os.environ.get('CSV_DELIMS', ',\\t|\\u0001')
 # CSV READER
 
 class Reader(object):
-    def __init__(self, file, delim=None, has_header=True):
+    def __init__(self, file, delim=None, has_header=False):
         self.__file = file
         self.__rownum = 0
-        self.__colnames = None
-        self.__memoized_delim = delim
+        self.__firstrow = None
+        self.__memoized_delim = None
         self.__memoized_row_re = None
         self.__memoized_field_re = None
+        self.__has_header = has_header
+
+        if delim is not None:
+            self.__memoize(delim)
 
         if has_header:
-            self.__colnames = self.__read_row()
+            self.__read_row()
+
+    def header(self):
+        return self.__firstrow
+
+    def next(self):
+        return self.__read_row()
+
+    def __next__(self):
+        return self.__read_row()
 
     def __iter__(self):
         while True:
@@ -41,36 +54,88 @@ class Reader(object):
             yield row
 
     def __read_row(self):
-        rownum = self.__rownum
         line = ''
 
         # A row may consist of multiple lines, so this loop reads them all.
-        # In most cases it will break after reading one line.
+        # In most cases it should break after reading one line.
         while True:
             next = self.__file.readline()
-            if next == '': break        # Break on EOF
-
-            row_re = self.__row_re(next)
             line += next
 
-            # Break on a valid row
-            if row_re.match(line): break
+            if next == '': break                          # Break on EOF
+            if self.__is_row(line.rstrip('\r\n')): break  # Break on valid row
 
         if line == '':
             row = None
         else:
-            line = line.rstrip('\r\n')
-            values = self.__split_line(line)
-            delim = self.__delim(line)
+            values = self.__split_line(line.rstrip('\r\n'))
+            cols = self.__firstrow
+
+            row = Row(self.__rownum, cols, values, self.__memoized_delim)
             self.__rownum += 1
 
-            row = Row(rownum, self.__colnames, values, delim)
+        # Save the first row with possible column names
+        if self.__has_header and not self.__firstrow and row is not None:
+            # Recreate the row with column names
+            row = Row(self.__rownum, row, values, self.__memoized_delim)
+            self.__firstrow = row
 
         return row
 
+    def __is_row(self, line):
+        is_row = False
+
+        # Use the memoized regex, if any
+        if self.__memoized_row_re:
+            is_row = self.__memoized_row_re.match(line)
+
+        # Otherwise determine the regex and memoize it
+        else:
+            delims = DELIMS.encode().decode('unicode_escape')
+            best_delim = None
+            best_count = 0
+
+            for d in delims:
+                count = line.count(d)
+
+                if count > best_count:
+                    best_delim = d
+                    best_count = count
+
+            if best_delim is not None:
+                regex = self.__mk_regex(best_delim)
+
+                if regex['row_re'].match(line):
+                    is_row = True
+
+            if is_row:
+                self.__memoize(best_delim)
+
+        return is_row
+        
+    def __mk_regex(self, delim):
+        unquoted_field_r = r'[^%s"]*' % delim
+        quoted_field_r = r'"(?:[^"]|"")*"'
+        field_r = r'(?:%s)|(?:%s)' % (unquoted_field_r, quoted_field_r)
+        row_r = r'(?:%s)(?:%s(?:%s))*' % (field_r, re.escape(delim), field_r)
+
+        regexes = dict(
+            row_re = re.compile(r'^(%s)$' % row_r),
+            field_re = re.compile(r'^(%s)$' % field_r)
+        )
+
+        return regexes
+
+    def __memoize(self, delim):
+        regex = self.__mk_regex(delim)
+
+        self.__memoized_delim = delim
+        self.__memoized_row_re = regex['row_re']
+        self.__memoized_field_re = regex['field_re']
+
     def __split_line(self, line):
-        delim = self.__delim(line)
-        field_re = self.__field_re(line)
+        delim = self.__memoized_delim
+        field_re = self.__memoized_field_re
 
         rawfields = line.split(delim)
         fields = []
@@ -81,7 +146,7 @@ class Reader(object):
             if len(last):
                 last += delim + f
 
-                if(field_re.match(last)):
+                if field_re.match(last):
                     fields.append(last)
                     last = ''
             elif field_re.match(f):
@@ -95,59 +160,6 @@ class Reader(object):
 
         return fields
 
-    def __delim(self, line):
-        '''
-        Return the delimiter with which the class was instantiated, if any,
-        otherwise guess one from the list of possible delimiters DELIM and the
-        last read line.  The guess is memoized for future calls.
-        '''
-        if self.__memoized_delim is None:
-            guesses = DELIMS.encode().decode('unicode_escape')
-            delim = guesses[0]   # Default to the first guess
-            count = 0
-
-            for g in guesses:
-                if line.count(g) > count:
-                    count = line.count(g)
-                    delim = g
-
-            self.__memoized_delim = delim
-
-        return self.__memoized_delim
-
-    def __row_re(self, line):
-        '''
-        Return the regular expression that matches a row.  The `line` parameter
-        is required to guess the delimiter for the file.
-        '''
-        if not self.__memoized_row_re:
-            delim = self.__delim(line)
-
-            unquoted_field_re = r'[^%s"]*' % delim
-            quoted_field_re = r'"(?:[^"]|"")*"'
-            field_re = r'(?:%s)|(?:%s)' % (unquoted_field_re, quoted_field_re)
-            row_re = r'(?:%s)(?:%s(?:%s))*' % (field_re, re.escape(delim), field_re)
-
-            self.__memoized_row_re = re.compile(r'^(%s)$' % row_re)
-
-        return self.__memoized_row_re
-
-    def __field_re(self, line):
-        '''
-        Return the regular expression that matches a field.  The `line`
-        parameter is required to guess the delimiter for the file.
-        '''
-        if not self.__memoized_field_re:
-            delim = self.__delim(line)
-
-            unquoted_field_re = r'[^%s"]*' % delim
-            quoted_field_re = r'"(?:[^"]|"")*"'
-            field_re = r'(?:%s)|(?:%s)' % (unquoted_field_re, quoted_field_re)
-
-            self.__memoized_field_re = re.compile(r'^(%s)$' % field_re)
-
-        return self.__memoized_field_re
-
 
 ##############################################################################
 # CSV ROW
@@ -158,6 +170,9 @@ class Row(object):
         self.__colnames = colnames
         self.__values = values
         self.__delim = delim
+
+    def delim(self):
+        return self.__delim
 
     def rownum(self):
         return self.__rownum
@@ -197,7 +212,7 @@ class Row(object):
         else:
             num = key
 
-        if num < len(values):
+        if 0 <= num and num < len(values):
             name = colnames[num].value() if colnames else None
             val = values[num] if num < len(values) else None
             cell = Cell(self.__rownum, name, num, val)

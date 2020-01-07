@@ -1,0 +1,329 @@
+#!/bin/sh
+
+##############################################################################
+# Cut columns from a csv file using column names.
+#
+
+##############################################################################
+# BOOTSTRAP
+#
+# Include ../lib in the search path before calling python.
+# (Thanks to https://unix.stackexchange.com/questions/20880)
+#
+if "true" : '''\'
+then
+    export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+
+    if [ -n "$CSV_PLUGINS_PATH" ]; then
+        export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
+    fi
+
+    exec python "$0" "$@"
+    exit 127
+fi
+'''
+
+##############################################################################
+# PYTHON CODE BEGINS HERE
+
+import os
+import re
+import sys
+import errno
+import libcsv
+import getopts
+import importlib
+
+__copyright__ = 'Copyright 2019 Mark Kim'
+__license__ = 'Apache 2.0'
+
+
+##############################################################################
+# GLOBALS
+
+SCRIPTNAME = os.path.basename(__file__)
+
+class opts:
+    files = []
+    delim = None
+    fields = None
+    translator = None
+
+
+##############################################################################
+# USAGE
+
+def usage():
+    '''\
+Print csv rows in a more human-readable format.
+
+usage: {SCRIPTNAME} [OPTIONS] [FILES]
+
+Options:
+  FILE                  csv file(s) to cut.
+
+  -f, --fields=FIELDS   Fields to cut.  FIELDS is a comma separated list of
+                        fields to cut from the files.
+  -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
+                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
+                        the SOH (ASCII 1), or other string literal of one or
+                        more characters and Python  string  escape  sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
+  -t, --translator=LIB  Use the plugin library LIB to preprocess the values
+                        before display.  LIB may be the full  path  to  the
+                        library  without  the  .py suffix, or it may just be
+                        the library name in which case CSV_PLUGINS_PATH is
+                        searched for the library.
+
+Environment Variables:
+  CSV_DELIMS            A set of characters used to guess the delimiter of a
+                        csv file.  The guesswork happens when reading  the
+                        first  line  of  the first FILE, by testing each
+                        character present in CSV_DELIMS for the character with
+                        the most occurrence in the line.  If any of the
+                        characters occur the same number  of  times  (including
+                        zero),  the  earlier  character  in the variable is
+                        chosen.  If the environment variable is not set, it
+                        defaults to '{libcsv.DELIMS}'.  CSV_DELIMS may include
+                        escape characters.
+
+  CSV_PLUGINS_PATH      A colon-separated list of directories in which the
+                        plugin library is searched.
+'''
+
+    print(usage.__doc__.format(**globals()))
+
+
+##############################################################################
+# MAIN
+
+def main():
+    errcount = 0
+
+    getopt = getopts.getopts(sys.argv, {
+        'd' : 1, 'delim'      : 1,
+        'f' : 1, 'fields'     : 1,
+        't' : 1, 'translator' : 1,
+        'h' : 0, 'help'       : 0,
+    })
+
+    for c in getopt:
+        if c in ('-')                   : opts.files.append(getopt.optarg)
+        elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('f', 'fields')       : opts.fields = parse_fieldselector(getopt.optarg)
+        elif c in ('t', 'translator')   : opts.translator = load_translator(getopt.optarg)
+        elif c in ('h', 'help')         : usage(); sys.exit(0)
+        else                            : errcount += 1
+
+    # Sanity check
+    if errcount:
+        sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
+        sys.exit(1)
+
+    # Read from STDIN if no file specified
+    if not opts.files:
+        opts.files.append("-")
+
+    # Load the translator
+    if not opts.translator:
+        opts.translator = DefaultTranslatorModule
+
+    # Read each file
+    for f in opts.files:
+        with smart_open(f) as fo:
+            csvcut(fo, opts.fields)
+
+
+def arg_to_delim(delim):
+    # Delimiter shorthands
+    if delim in ('p'): delim = '|'
+    elif delim in ('t'): delim = '\t'
+    elif delim in ('a'): delim = '\u0001'
+
+    # Translate escape characters
+    delim = delim.encode().decode('unicode_escape')
+
+    return delim
+
+
+def load_translator(lib):
+    # The library is imported from the system path; so we add the library
+    # folder to the system path, load the library, then restore the path.
+    folder = os.path.dirname(lib)
+    filename = os.path.basename(lib)
+
+    if(len(folder)): sys.path.insert(0, folder)
+    translator = importlib.import_module(filename)
+    if(len(folder)): sys.path.pop(0)
+    
+    return translator
+
+
+def parse_fieldselector(string):
+    parts = string.split(',')
+    field_r = r'^((?P<COLNO>[0-9]+)|[/](?P<REGEX>[^/]+)([/](?P<MOD>.*))?|=?(?P<COLNAME>.+))$'
+    field_rc = re.compile(field_r)
+
+    for i, p in enumerate(parts):
+        match = field_rc.search(p)
+
+        if match.group('COLNO'):
+            value = match.group('COLNO')
+            parts[i] = FieldSelectorByColumnNumber(int(value)-1)
+        elif match.group('REGEX'):
+            regex = match.group('REGEX')
+            mod = match.group('MOD')
+            parts[i] = FieldSelectorByValue(regex, mod)
+        elif match.group('COLNAME'):
+            value = match.group('COLNAME')
+            parts[i] = FieldSelectorByColumnName(value)
+        else:
+            sys.stderr.write('Invalid field selector: {p}\n'.format(**vars()))
+
+    return parts
+
+
+def smart_open(filename, mode='r'):
+    '''Open a file for reading, treating '-' as a stdin or stdout, depending on
+    the mode.'''
+
+    if filename == '-':
+        # Duplicate stdin/stdout so the caller can close it without closing stdin.
+        fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
+        fo = os.fdopen(os.dup(fd))
+    else:
+        fo = open(filename, mode)
+
+    return fo
+
+
+def csvcut(file, fields):
+    reader = RowIterator(file, opts.delim)
+    translator = opts.translator.Translator()
+
+    for row in reader:
+        selectable = FieldSelectableRow(row)
+        delim = row.delim()
+        selected = []
+        output = ''
+
+        # Select the cells
+        for f in fields:
+            selected.extend(selectable.select(f))
+
+        # Queue each cell for printing
+        for i, value in enumerate(selected):
+            if i > 0:
+                output += delim
+
+            output += value
+
+        print(output)
+
+
+class RowIterator(object):
+    def __init__(self, file, delim):
+        self.__reader = libcsv.Reader(file, delim=delim, has_header=True)
+
+    def __iter__(self):
+        header = self.__reader.header()
+
+        if header is not None:
+            yield header
+
+        for row in self.__reader:
+            yield row
+
+    def header(self):
+        return self.__reader.header()
+
+
+class FieldSelectableRow(object):
+    def __init__(self, row):
+        self.__row = row
+
+    def select(self, selector):
+        row = self.__row
+        selected = []
+
+        if isinstance(selector, FieldSelectorByColumnNumber):
+            index = selector.value()
+
+            try:
+                value = row[index].value()
+            except AttributeError as e:
+                value = ''
+
+            selected.append(value)
+
+        elif isinstance(selector, FieldSelectorByColumnName):
+            key = selector.value()
+
+            try:
+                selected.append(row[key].value())
+            except ValueError as e:
+                raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % key)
+
+        elif isinstance(selector, FieldSelectorByValue):
+            for cell in row:
+                value = cell.value()
+
+                if selector.match(value):
+                    selected.append(value)
+
+        return selected
+
+
+class FieldSelector(object):
+    class InvalidSelectorException(Exception): pass
+
+    def __init__(self, value):
+        self.__value = value
+
+    def value(self):
+        return self.__value
+
+
+class FieldSelectorByColumnNumber(FieldSelector):
+    def __init__(self, value):
+        super(FieldSelectorByColumnNumber, self).__init__(value)
+
+
+class FieldSelectorByColumnName(FieldSelector):
+    def __init__(self, value):
+        super(FieldSelectorByColumnName, self).__init__(value)
+
+
+class FieldSelectorByValue(FieldSelector):
+    def __init__(self, regex, mod):
+        if mod:
+            regex += ('(?%s)' % mod)
+
+        self.__regex_rc = re.compile(regex)
+
+        super(FieldSelectorByValue, self).__init__(regex)
+
+    def match(self, value):
+        return self.__regex_rc.search(value)
+
+
+class DefaultTranslatorModule(object):
+    class Translator(object):
+        def __call__(self, cell):
+            return cell
+
+
+##############################################################################
+# ENTRY POINT
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit(errno.EOWNERDEAD)
+
+
+# vim:ft=python
