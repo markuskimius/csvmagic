@@ -362,7 +362,7 @@ class FieldSelectorByColumnRange(FieldSelector):
         if end is None: end = colcount
         elif end <= 0:  end += colcount + 1
 
-        if start > end: step = -1
+        # if start > end: step = -1
 
         for i in range(start, end+step, step):
             value = row.get(i)
