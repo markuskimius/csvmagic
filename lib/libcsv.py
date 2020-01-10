@@ -110,6 +110,9 @@ class Reader(object):
 
             if is_row:
                 self.__memoize(best_delim)
+            else:
+                sys.stderr.write('Unable to guess delimiter, please specify one with --delim\n')
+                sys.exit(1)
 
         return is_row
         
