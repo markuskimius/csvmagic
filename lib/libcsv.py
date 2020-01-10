@@ -77,7 +77,7 @@ class Reader(object):
             row = Row(self.__rownum, header, values, self.__delim)
             self.__rownum += 1
 
-            if self.__firstrow is None:
+            if self.__firstrow is None and self.__has_header:
                 self.__firstrow = row
 
         return row
