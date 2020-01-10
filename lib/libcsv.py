@@ -23,141 +23,128 @@ DELIMS = os.environ.get('CSV_DELIMS', ',\\t|\\u0001')
 
 class Reader(object):
     def __init__(self, file, delim=None, has_header=False):
+        self.__has_header = has_header
         self.__file = file
         self.__rownum = 0
         self.__firstrow = None
-        self.__memoized_delim = None
-        self.__memoized_row_re = None
-        self.__memoized_field_re = None
-        self.__has_header = has_header
+        self.__delim = None
+        self.__row_re = None
+        self.__field_re = None
 
         if delim is not None:
-            self.__memoize(delim)
+            self.__setdelim(delim)
 
         if has_header:
-            self.__read_row()
+            self.__readrow()
 
     def header(self):
         return self.__firstrow
 
     def next(self):
-        return self.__read_row()
+        return self.__readrow()
 
     def __next__(self):
-        return self.__read_row()
+        return self.__readrow()
 
     def __iter__(self):
         while True:
-            row = self.__read_row()
+            row = self.__readrow()
             if row is None: break
 
             yield row
 
-    def __read_row(self):
-        line = ''
+    def __readrow(self):
+        gotline = False
+        row = None
+        buf = ''
 
-        # A row may consist of multiple lines, so this loop reads them all.
-        # In most cases it should break after reading one line.
         while True:
-            next = self.__file.readline()
-            line += next
+            line = self.__readline()
+            if line is None: break
 
-            if next == '': break                          # Break on EOF
-            if self.__is_row(line.rstrip('\r\n')): break  # Break on valid row
+            gotline = True
+            buf += line
 
-        if line == '':
-            row = None
-        else:
-            values = self.__split_line(line.rstrip('\r\n'))
-            cols = self.__firstrow
+            if self.__is_validrow(buf): break
 
-            row = Row(self.__rownum, cols, values, self.__memoized_delim)
+        if gotline:
+            values = self.__split(buf)
+            header = self.__firstrow
+
+            if header is None and self.__has_header:
+                header = Row(self.__rownum, header, values, self.__delim)
+
+            row = Row(self.__rownum, header, values, self.__delim)
             self.__rownum += 1
 
-        # Save the first row with possible column names
-        if self.__has_header and not self.__firstrow and row is not None:
-            # Recreate the row with column names
-            row = Row(self.__rownum, row, values, self.__memoized_delim)
-            self.__firstrow = row
+            if self.__firstrow is None:
+                self.__firstrow = row
 
         return row
 
-    def __is_row(self, line):
-        is_row = False
+    def __readline(self):
+        line = self.__file.readline()
 
-        # Use the memoized regex, if any
-        if self.__memoized_row_re:
-            is_row = self.__memoized_row_re.match(line)
-
-        # Otherwise determine the regex and memoize it
+        if line == '':
+            line = None
         else:
-            delims = DELIMS.encode().decode('unicode_escape')
-            best_delim = None
-            best_count = 0
+            line = line.rstrip('\r\n')
 
-            for d in delims:
-                count = line.count(d)
+        if self.__delim is None:
+            self.__guessdelim(line)
 
-                if count > best_count:
-                    best_delim = d
-                    best_count = count
+        return line
 
-            if best_delim is not None:
-                regex = self.__mk_regex(best_delim)
-
-                if regex['row_re'].match(line):
-                    is_row = True
-
-            if is_row:
-                self.__memoize(best_delim)
-            else:
-                sys.stderr.write('Unable to guess delimiter, please specify one with --delim\n')
-                sys.exit(1)
-
-        return is_row
+    def __guessdelim(self, buf):
+        delims = DELIMS.encode().decode('unicode_escape')
+        best_delim = None
+        best_count = 0
         
-    def __mk_regex(self, delim):
+        for d in delims:
+            count = buf.count(d)
+
+            if count > best_count:
+                best_delim = d
+                best_count = count
+
+        if best_delim is None:
+            sys.stderr.write('Unable to guess the delimiter, please specify one with --delim\n')
+            sys.exit(1)
+        else:
+            self.__setdelim(best_delim)
+
+    def __setdelim(self, delim):
         unquoted_field_r = r'[^%s"]*' % delim
         quoted_field_r = r'"(?:[^"]|"")*"'
         field_r = r'(?:%s)|(?:%s)' % (unquoted_field_r, quoted_field_r)
         row_r = r'(?:%s)(?:%s(?:%s))*' % (field_r, re.escape(delim), field_r)
+        row_re = re.compile(r'^(%s)$' % row_r)
+        field_re = re.compile(r'^(%s)$' % field_r)
 
-        regexes = dict(
-            row_re = re.compile(r'^(%s)$' % row_r),
-            field_re = re.compile(r'^(%s)$' % field_r)
-        )
+        self.__delim = delim
+        self.__row_re = row_re
+        self.__field_re = field_re
 
-        return regexes
+    def __is_validrow(self, buf):
+        return self.__row_re.match(buf)
 
-    def __memoize(self, delim):
-        regex = self.__mk_regex(delim)
-
-        self.__memoized_delim = delim
-        self.__memoized_row_re = regex['row_re']
-        self.__memoized_field_re = regex['field_re']
-
-    def __split_line(self, line):
-        delim = self.__memoized_delim
-        field_re = self.__memoized_field_re
-
-        rawfields = line.split(delim)
+    def __split(self, buf):
+        rawfields = buf.split(self.__delim)
         fields = []
         last = ''
 
-        # Join fields containing delimiters
         for f in rawfields:
             if len(last):
-                last += delim + f
+                last += self.__delim + f
 
-                if field_re.match(last):
+                if self.__field_re.match(last):
                     fields.append(last)
                     last = ''
-            elif field_re.match(f):
+            elif self.__field_re.match(f):
                 fields.append(f)
             else:
                 last = f
 
-        # Clean up
         if len(last):
             fields.append(last)
 
@@ -168,14 +155,14 @@ class Reader(object):
 # CSV ROW
 
 class Row(object):
-    def __init__(self, rownum, colnames, values, delim):
+    def __init__(self, rownum, header, values, delim):
         self.__rownum = rownum
-        self.__colnames = colnames
+        self.__header = header
         self.__values = values
         self.__delim = delim
 
     def header(self):
-        return self.__colnames
+        return self.__header
 
     def delim(self):
         return self.__delim
@@ -189,11 +176,11 @@ class Row(object):
     def as_dict(self):
         mydict = dict()
         values = self.__values
-        colnames = self.__colnames
-        colcount = max(len(values), len(colnames or []))
+        header = self.__header
+        colcount = max(len(values), len(header or []))
 
         for num in range(colcount):
-            key = colnames[num] if colnames else None
+            key = header[num] if header else None
             val = values[num] if num < len(values) else None
 
             mydict[key] = val
@@ -207,32 +194,32 @@ class Row(object):
         return len(self.__values)
 
     def __getitem__(self, key):
-        colnames = self.__colnames
+        header = self.__header
         values = self.__values
         cell = None
 
         if isinstance(key, slice):
             raise Exception('Slice is not supported')
         elif isinstance(key, str):
-            num = colnames.index(key)
+            num = header.index(key)
         else:
             num = key
 
         if num < 0:
-            num += len(colnames)
+            num += len(header)
 
         if 0 <= num and num < len(values):
-            name = colnames[num].value() if colnames else None
+            name = header[num].value() if header else None
             val = values[num] if num < len(values) else None
             cell = Cell(self.__rownum, name, num, val)
 
         return cell
 
     def __iter__(self):
-        colnames = self.__colnames
+        header = self.__header
 
         for num, val in enumerate(self.__values):
-            name = colnames[num].value() if colnames and num < len(colnames) else None
+            name = header[num].value() if header and num < len(header) else None
 
             yield Cell(self.__rownum, name, num, val)
 
