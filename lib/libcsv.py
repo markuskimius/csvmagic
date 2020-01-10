@@ -209,7 +209,7 @@ class Row(object):
             num += len(header)
 
         if 0 <= num and num < len(values):
-            name = header[num].value() if header else None
+            name = header[num].value() if header and header[num] else None
             val = values[num] if num < len(values) else None
             cell = Cell(self.__rownum, name, num, val)
 
