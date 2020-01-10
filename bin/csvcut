@@ -117,6 +117,10 @@ def main():
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
+    if opts.fields is None:
+        sys.stderr.write('Must specify at least one field using --fields\n')
+        errcount += 1
+
     # Sanity check
     if errcount:
         sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
@@ -263,10 +267,10 @@ class FieldSelectableRow(object):
             yield cell.value()
 
     def get(self, key, default=None):
-        if isinstance(key, int) and key == 0:
-            key = None
-        elif isinstance(key, int) and key > 0:
+        if isinstance(key, int) and key > 0:
             key -= 1
+        elif isinstance(key, int):
+            key = None
 
         cell = None if key is None else self.__row[key]
         value = default if cell is None else cell.value()
@@ -294,6 +298,12 @@ class FieldSelectorByColumnNumber(FieldSelector):
         self.__index = index
 
     def select(self, row):
+        colcount = len(row.header())
+        index = self.__index
+
+        if index <= 0:
+            index += colcount + 1
+
         value = row.get(self.__index, '')
 
         return [value]
@@ -307,7 +317,8 @@ class FieldSelectorByColumnName(FieldSelector):
         try:
             value = row.get(self.__key, '')
         except ValueError as e:
-            raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % self.__key)
+            # raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % self.__key)
+            value = ''
 
         return [value]
 
@@ -317,20 +328,17 @@ class FieldSelectorByColumnRegex(FieldSelector):
         if mod: regex += ('(?%s)' % mod)
 
         self.__regex_rc = re.compile(regex)
-        self.__colnums = None
 
     def select(self, row):
         selected = []
+        colnums = []
 
-        # Memoize the column numbers
-        if self.__colnums is None:
-            self.__colnums = []
+        # Column regexes to indeces
+        for i, name in enumerate(row.header()):
+            if self.__regex_rc.search(name):
+                colnums.append(i+1)
 
-            for i, name in enumerate(row.header()):
-                if self.__regex_rc.search(name):
-                    self.__colnums.append(i+1)
-
-        for index in self.__colnums:
+        for index in colnums:
             selected.append(row.get(index, ''))
 
         return selected
@@ -342,10 +350,19 @@ class FieldSelectorByColumnRange(FieldSelector):
         self.__end = end
 
     def select(self, row):
-        start = 1 if self.__start is None else self.__start
-        end = len(row) if self.__end is None else self.__end
-        step = 1 if start < end else -1
+        colcount = len(row.header())
+        start = self.__start
+        end = self.__end
+        step = 1
         values = []
+
+        if start is None: start = 1
+        elif start <= 0:  start += colcount + 1
+
+        if end is None: end = colcount
+        elif end <= 0:  end += colcount + 1
+
+        if start > end: step = -1
 
         for i in range(start, end+step, step):
             value = row.get(i)
