@@ -13,11 +13,6 @@
 if "true" : '''\'
 then
     export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
-    export PYTHONPATH="$(dirname $0)/../plugins:$PYTHONPATH"
-
-    if [ -n "$CSV_PLUGINS_PATH" ]; then
-        export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
-    fi
 
     exec python "$0" "$@"
     exit 127
@@ -33,7 +28,6 @@ import sys
 import errno
 import libcsv
 import getopts
-import importlib
 
 __copyright__ = 'Copyright 2019 Mark Kim'
 __license__ = 'Apache 2.0'
@@ -48,7 +42,6 @@ class opts:
     files = []
     delim = None
     fields = None
-    translator = None
 
 
 ##############################################################################
@@ -121,7 +114,6 @@ def main():
     getopt = getopts.getopts(sys.argv, {
         'd' : 1, 'delim'      : 1,
         'f' : 1, 'fields'     : 1,
-        't' : 1, 'translator' : 1,
         'h' : 0, 'help'       : 0,
     })
 
@@ -129,7 +121,6 @@ def main():
         if c in ('-')                   : opts.files.append(getopt.optarg)
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
         elif c in ('f', 'fields')       : opts.fields = parse_fieldselector(getopt.optarg)
-        elif c in ('t', 'translator')   : opts.translator = load_translator(getopt.optarg)
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -145,10 +136,6 @@ def main():
     # Read from STDIN if no file specified
     if not opts.files:
         opts.files.append("-")
-
-    # Load the translator
-    if not opts.translator:
-        opts.translator = DefaultTranslatorModule
 
     # Read each file
     for f in opts.files:
@@ -166,19 +153,6 @@ def arg_to_delim(delim):
     delim = delim.encode().decode('unicode_escape')
 
     return delim
-
-
-def load_translator(lib):
-    # The library is imported from the system path; so we add the library
-    # folder to the system path, load the library, then restore the path.
-    folder = os.path.dirname(lib)
-    filename = os.path.basename(lib)
-
-    if(len(folder)): sys.path.insert(0, folder)
-    translator = importlib.import_module(filename)
-    if(len(folder)): sys.path.pop(0)
-    
-    return translator
 
 
 def parse_fieldselector(string):
@@ -231,7 +205,6 @@ def smart_open(filename, mode='r'):
 
 def csvcut(file, fields):
     reader = RowIterator(file, opts.delim)
-    translator = opts.translator.Translator()
 
     for row in reader:
         selectable = FieldSelectableRow(row)
@@ -403,12 +376,6 @@ class FieldSelectorByValueRegex(FieldSelector):
                 selected.append(value)
 
         return selected
-
-
-class DefaultTranslatorModule(object):
-    class Translator(object):
-        def __call__(self, cell):
-            return cell
 
 
 ##############################################################################
