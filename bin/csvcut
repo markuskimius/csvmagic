@@ -157,7 +157,7 @@ def arg_to_delim(delim):
 
 def parse_fieldselector(string):
     parts = string.split(',')
-    field_r = r'^((?P<COLNO>[-+]?[0-9]+)|(?P<RANGE>(?P<START>[-+]?[0-9]+)[-](?P<END>([-+]?[0-9]+)?))|(?P<VMOD>[~])?[/](?P<REGEX>([^\\/]|\\.)+)[/](?P<MOD>[A-Za-z]*)|=(?P<COLNAME>.+))$'
+    field_r = r'^((?P<COLNO>[-+]?[0-9]+)|(?P<RANGE>(?P<START>[-+]?[0-9]+)[-](?P<END>([-+]?[0-9]+)?))|(?P<VMOD>[~])?[/](?P<REGEX>([^\\/]|\\.)+)[/](?P<MOD>[A-Za-z]*)|(?P<REST>[-])|=(?P<COLNAME>.+))$'
     field_rc = re.compile(field_r)
 
     for i, p in enumerate(parts):
@@ -183,6 +183,8 @@ def parse_fieldselector(string):
         elif match.group('COLNAME'):
             value = match.group('COLNAME')
             parts[i] = FieldSelectorByColumnName(value)
+        elif match.group('REST'):
+            parts[i] = FieldSelectorByUnselected()
         else:
             parts[i] = FieldSelectorByColumnName(p)
 
@@ -247,6 +249,7 @@ class RowIterator(object):
 class FieldSelectableRow(object):
     def __init__(self, row):
         self.__row = row
+        self.__selected = []
 
     def __len__(self):
         return len(self.__row)
@@ -255,7 +258,15 @@ class FieldSelectableRow(object):
         for cell in self.__row:
             yield cell.value()
 
-    def get(self, key, default=None):
+    def header(self):
+        colnames = []
+
+        for cell in self.__row.header():
+            colnames.append(cell.value())
+
+        return colnames
+
+    def select(self, key, default=None):
         if isinstance(key, int) and key > 0:
             key -= 1
         elif isinstance(key, int):
@@ -264,15 +275,27 @@ class FieldSelectableRow(object):
         cell = None if key is None else self.__row[key]
         value = default if cell is None else cell.value()
 
+        if cell is not None:
+            self.__selected.append(cell.colnum())
+
         return value
 
-    def header(self):
-        colnames = []
+    def unselected(self):
+        unselected = []
 
-        for cell in self.__row.header():
-            colnames.append(cell.value())
+        for cell in self.__row:
+            index = cell.colnum()
 
-        return colnames
+            if index not in self.__selected:
+                value = cell.value()
+                self.__selected.append(index)
+
+                if value is None:
+                    value = ''
+
+                unselected.append(value)
+
+        return unselected
 
 
 class FieldSelector(object):
@@ -293,7 +316,7 @@ class FieldSelectorByColumnNumber(FieldSelector):
         if index <= 0:
             index += colcount + 1
 
-        value = row.get(index, '')
+        value = row.select(index, '')
 
         return [value]
 
@@ -304,7 +327,7 @@ class FieldSelectorByColumnName(FieldSelector):
 
     def select(self, row):
         try:
-            value = row.get(self.__key, '')
+            value = row.select(self.__key, '')
         except ValueError as e:
             # raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % self.__key)
             value = ''
@@ -328,7 +351,7 @@ class FieldSelectorByColumnRegex(FieldSelector):
                 colnums.append(i+1)
 
         for index in colnums:
-            selected.append(row.get(index, ''))
+            selected.append(row.select(index, ''))
 
         return selected
 
@@ -354,7 +377,7 @@ class FieldSelectorByColumnRange(FieldSelector):
         # if start > end: step = -1
 
         for i in range(start, end+step, step):
-            value = row.get(i)
+            value = row.select(i)
 
             if value is not None:
                 values.append(value)
@@ -371,11 +394,17 @@ class FieldSelectorByValueRegex(FieldSelector):
     def select(self, row):
         selected = []
 
-        for value in row:
+        for i, value in enumerate(row):
             if self.__regex_rc.search(value):
                 selected.append(value)
+                row.select(i)
 
         return selected
+
+
+class FieldSelectorByUnselected(FieldSelector):
+    def select(self, row):
+        return row.unselected()
 
 
 ##############################################################################
