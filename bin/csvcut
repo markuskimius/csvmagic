@@ -163,24 +163,34 @@ def load_translator(lib):
 
 def parse_fieldselector(string):
     parts = string.split(',')
-    field_r = r'^((?P<COLNO>[0-9]+)|[/](?P<REGEX>[^/]+)([/](?P<MOD>.*))?|=?(?P<COLNAME>.+))$'
+    field_r = r'^((?P<COLNO>[-+]?[0-9]+)|(?P<RANGE>(?P<START>[-+]?[0-9]+)[-](?P<END>([-+]?[0-9]+)?))|(?P<VMOD>[~])?[/](?P<REGEX>([^\\/]|\\.)+)[/](?P<MOD>[A-Za-z]*)|=(?P<COLNAME>.+))$'
     field_rc = re.compile(field_r)
 
     for i, p in enumerate(parts):
         match = field_rc.search(p)
 
-        if match.group('COLNO'):
+        if not match:
+            parts[i] = FieldSelectorByColumnName(p)
+        elif match.group('COLNO'):
             value = match.group('COLNO')
-            parts[i] = FieldSelectorByColumnNumber(int(value)-1)
+            parts[i] = FieldSelectorByColumnNumber(int(value))
+        elif match.group('RANGE'):
+            start = None if match.group('START') == '' else int(match.group('START'))
+            end = None if match.group('END') == '' else int(match.group('END'))
+            parts[i] = FieldSelectorByColumnRange(start, end)
+        elif match.group('VMOD'):
+            regex = match.group('REGEX')
+            mod = match.group('MOD')
+            parts[i] = FieldSelectorByValueRegex(regex, mod)
         elif match.group('REGEX'):
             regex = match.group('REGEX')
             mod = match.group('MOD')
-            parts[i] = FieldSelectorByValue(regex, mod)
+            parts[i] = FieldSelectorByColumnRegex(regex, mod)
         elif match.group('COLNAME'):
             value = match.group('COLNAME')
             parts[i] = FieldSelectorByColumnName(value)
         else:
-            sys.stderr.write('Invalid field selector: {p}\n'.format(**vars()))
+            parts[i] = FieldSelectorByColumnName(p)
 
     return parts
 
@@ -206,21 +216,22 @@ def csvcut(file, fields):
     for row in reader:
         selectable = FieldSelectableRow(row)
         delim = row.delim()
-        selected = []
-        output = ''
+        output = []
 
         # Select the cells
-        for f in fields:
-            selected.extend(selectable.select(f))
+        for selector in fields:
+            selected = selector.select(selectable)
 
-        # Queue each cell for printing
-        for i, value in enumerate(selected):
+            output.extend(selected)
+
+        # Output the selected fields
+        for i, value in enumerate(output):
             if i > 0:
-                output += delim
+                sys.stdout.write(delim)
 
-            output += value
+            sys.stdout.write(value)
 
-        print(output)
+        sys.stdout.write('\n')
 
 
 class RowIterator(object):
@@ -244,69 +255,121 @@ class FieldSelectableRow(object):
     def __init__(self, row):
         self.__row = row
 
-    def select(self, selector):
-        row = self.__row
-        selected = []
+    def __len__(self):
+        return len(self.__row)
 
-        if isinstance(selector, FieldSelectorByColumnNumber):
-            index = selector.value()
+    def __iter__(self):
+        for cell in self.__row:
+            yield cell.value()
 
-            try:
-                value = row[index].value()
-            except AttributeError as e:
-                value = ''
+    def get(self, key, default=None):
+        if isinstance(key, int) and key == 0:
+            key = None
+        elif isinstance(key, int) and key > 0:
+            key -= 1
 
-            selected.append(value)
+        cell = None if key is None else self.__row[key]
+        value = default if cell is None else cell.value()
 
-        elif isinstance(selector, FieldSelectorByColumnName):
-            key = selector.value()
+        return value
 
-            try:
-                selected.append(row[key].value())
-            except ValueError as e:
-                raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % key)
+    def header(self):
+        colnames = []
 
-        elif isinstance(selector, FieldSelectorByValue):
-            for cell in row:
-                value = cell.value()
+        for cell in self.__row.header():
+            colnames.append(cell.value())
 
-                if selector.match(value):
-                    selected.append(value)
-
-        return selected
+        return colnames
 
 
 class FieldSelector(object):
     class InvalidSelectorException(Exception): pass
 
-    def __init__(self, value):
-        self.__value = value
-
-    def value(self):
-        return self.__value
+    def select(self, row):
+        return []
 
 
 class FieldSelectorByColumnNumber(FieldSelector):
-    def __init__(self, value):
-        super(FieldSelectorByColumnNumber, self).__init__(value)
+    def __init__(self, index):
+        self.__index = index
+
+    def select(self, row):
+        value = row.get(self.__index, '')
+
+        return [value]
 
 
 class FieldSelectorByColumnName(FieldSelector):
-    def __init__(self, value):
-        super(FieldSelectorByColumnName, self).__init__(value)
+    def __init__(self, key):
+        self.__key = key
+
+    def select(self, row):
+        try:
+            value = row.get(self.__key, '')
+        except ValueError as e:
+            raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % self.__key)
+
+        return [value]
 
 
-class FieldSelectorByValue(FieldSelector):
+class FieldSelectorByColumnRegex(FieldSelector):
     def __init__(self, regex, mod):
-        if mod:
-            regex += ('(?%s)' % mod)
+        if mod: regex += ('(?%s)' % mod)
+
+        self.__regex_rc = re.compile(regex)
+        self.__colnums = None
+
+    def select(self, row):
+        selected = []
+
+        # Memoize the column numbers
+        if self.__colnums is None:
+            self.__colnums = []
+
+            for i, name in enumerate(row.header()):
+                if self.__regex_rc.search(name):
+                    self.__colnums.append(i+1)
+
+        for index in self.__colnums:
+            selected.append(row.get(index, ''))
+
+        return selected
+
+
+class FieldSelectorByColumnRange(FieldSelector):
+    def __init__(self, start, end):
+        self.__start = start
+        self.__end = end
+
+    def select(self, row):
+        start = 1 if self.__start is None else self.__start
+        end = len(row) if self.__end is None else self.__end
+        step = 1 if start < end else -1
+        values = []
+
+        for i in range(start, end+step, step):
+            value = row.get(i)
+
+            if value is not None:
+                values.append(value)
+
+        return values
+
+
+class FieldSelectorByValueRegex(FieldSelector):
+    def __init__(self, regex, mod):
+        if mod: regex += ('(?%s)' % mod)
 
         self.__regex_rc = re.compile(regex)
 
-        super(FieldSelectorByValue, self).__init__(regex)
+    def select(self, row):
+        selected = []
 
-    def match(self, value):
-        return self.__regex_rc.search(value)
+        for value in row:
+            if self.__regex_rc.search(value):
+                selected.append(value)
+
+        return selected
 
 
 class DefaultTranslatorModule(object):

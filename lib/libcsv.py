@@ -171,6 +171,9 @@ class Row(object):
         self.__values = values
         self.__delim = delim
 
+    def header(self):
+        return self.__colnames
+
     def delim(self):
         return self.__delim
 
@@ -211,6 +214,9 @@ class Row(object):
             num = colnames.index(key)
         else:
             num = key
+
+        if num < 0:
+            num += len(colnames)
 
         if 0 <= num and num < len(values):
             name = colnames[num].value() if colnames else None
