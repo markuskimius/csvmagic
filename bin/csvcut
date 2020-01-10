@@ -298,13 +298,13 @@ class FieldSelectorByColumnNumber(FieldSelector):
         self.__index = index
 
     def select(self, row):
-        colcount = len(row.header())
+        colcount = len(row)
         index = self.__index
 
         if index <= 0:
             index += colcount + 1
 
-        value = row.get(self.__index, '')
+        value = row.get(index, '')
 
         return [value]
 
@@ -350,7 +350,7 @@ class FieldSelectorByColumnRange(FieldSelector):
         self.__end = end
 
     def select(self, row):
-        colcount = len(row.header())
+        colcount = len(row)
         start = self.__start
         end = self.__end
         step = 1
