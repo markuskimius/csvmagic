@@ -75,8 +75,9 @@ Options:
 
                         * /REGEX/[MOD]:  The name of the column, using regex.
                           All columns matching the REGEX are output.  REGEX
-                          cannot have a comma.  MOD is a modifier (e.g., i for
-                          case insensitive match)
+                          cannot have a comma.  MOD is a modifier:
+                          
+                            i  case insensitive match.
 
                         * ~/REGEX/[MOD]:  The values matching this regex.
 
@@ -157,7 +158,7 @@ def arg_to_delim(delim):
 
 def parse_fieldselector(string):
     parts = string.split(',')
-    field_r = r'^((?P<COLNO>[-+]?[0-9]+)|(?P<RANGE>(?P<START>[-+]?[0-9]+)[-](?P<END>([-+]?[0-9]+)?))|(?P<VMOD>[~])?[/](?P<REGEX>([^\\/]|\\.)+)[/](?P<MOD>[A-Za-z]*)|(?P<REST>[-])|=(?P<COLNAME>.+))$'
+    field_r = r'^((?P<COLNO>[-+]?[0-9]+)|(?P<RANGE>(?P<START>[-+]?[0-9]+)[-](?P<END>([-+]?[0-9]+)?))|(?P<VMOD>[~])?[/](?P<REGEX>([^\\/]|\\.)+)[/](?P<MOD>[i]*)|(?P<REST>[-])|=(?P<COLNAME>.+))$'
     field_rc = re.compile(field_r)
 
     for i, p in enumerate(parts):
