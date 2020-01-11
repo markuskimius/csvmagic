@@ -1,0 +1,233 @@
+#!/bin/sh
+
+##############################################################################
+# Align columns in a csv.
+#
+
+##############################################################################
+# BOOTSTRAP
+#
+# Include ../lib in the search path before calling python.
+# (Thanks to https://unix.stackexchange.com/questions/20880)
+#
+if "true" : '''\'
+then
+    export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+
+    exec python "$0" "$@"
+    exit 127
+fi
+'''
+
+##############################################################################
+# PYTHON CODE BEGINS HERE
+
+import os
+import re
+import sys
+import errno
+import libcsv
+import getopts
+
+__copyright__ = 'Copyright 2020 Mark Kim'
+__license__ = 'Apache 2.0'
+
+
+##############################################################################
+# GLOBALS
+
+SCRIPTNAME = os.path.basename(__file__)
+
+class opts:
+    files = []
+    widths = []
+    delim = None
+    padding = '  '
+    buffered = True
+
+
+##############################################################################
+# USAGE
+
+def usage():
+    '''\
+Align columns in a csv file.
+
+usage: {SCRIPTNAME} [OPTIONS] [FILES]
+
+Options:
+  FILE                  csv file(s) to cut.
+
+  -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
+                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
+                        the SOH (ASCII 1), or other string literal of one or
+                        more characters and Python  string  escape  sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
+
+  -p, --padding=PAD     Characters to use as padding between the columns.
+                        The default is two spaces.
+
+  -w, --width=WIDTHS    Comma separate list of field widths.  The last number
+                        is the default width of any column without a specified
+                        width.  Setting this options disables buffering so the
+                        output is faster.
+
+Environment Variables:
+  CSV_DELIMS            A set of characters used to guess the delimiter of a
+                        csv file.  The guesswork happens when reading  the
+                        first  line  of  the first FILE, by testing each
+                        character present in CSV_DELIMS for the character with
+                        the most occurrence in the line.  If any of the
+                        characters occur the same number  of  times  (including
+                        zero),  the  earlier  character  in the variable is
+                        chosen.  If the environment variable is not set, it
+                        defaults to '{libcsv.DELIMS}'.  CSV_DELIMS may include
+                        escape characters.
+
+'''
+
+    print(usage.__doc__.format(**globals()))
+
+
+##############################################################################
+# MAIN
+
+def main():
+    errcount = 0
+
+    getopt = getopts.getopts(sys.argv, {
+        'd' : 1,           'delim'    : 1,
+        'p' : 1,           'padding'  : 1,
+        'w' : is_intarray, 'width'    : is_intarray,
+        'h' : 0,           'help'     : 0,
+    })
+
+    for c in getopt:
+        if c in ('-')                   : opts.files.append(getopt.optarg)
+        elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('p', 'padding')      : opts.padding = getopt.optarg
+        elif c in ('w', 'width')        :
+            opts.widths.extend(getopt.optarg.split(','))
+            opts.buffered = False
+        elif c in ('h', 'help')         : usage(); sys.exit(0)
+        else                            : errcount += 1
+
+    # Sanity check
+    if errcount:
+        sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
+        sys.exit(1)
+
+    # Read from STDIN if no file specified
+    if not opts.files:
+        opts.files.append("-")
+
+    # Read each file
+    for f in opts.files:
+        with smart_open(f) as fo:
+            csvalign(fo, opts.widths)
+
+
+def is_intarray(arg):
+    isok = True
+
+    for v in arg.split(','):
+        try:
+            int(v)
+        except ValueError as e:
+            isok = False
+            break
+
+    return isok
+
+
+def arg_to_delim(delim):
+    # Delimiter shorthands
+    if delim in ('p'): delim = '|'
+    elif delim in ('t'): delim = '\t'
+    elif delim in ('a'): delim = '\u0001'
+
+    # Translate escape characters
+    delim = delim.encode().decode('unicode_escape')
+
+    return delim
+
+
+def smart_open(filename, mode='r'):
+    '''Open a file for reading, treating '-' as a stdin or stdout, depending on
+    the mode.'''
+
+    if filename == '-':
+        # Duplicate stdin/stdout so the caller can close it without closing stdin.
+        fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
+        fo = os.fdopen(os.dup(fd))
+    else:
+        fo = open(filename, mode)
+
+    return fo
+
+
+def csvalign(file, widths):
+    reader = libcsv.Reader(file, delim=opts.delim, has_header=True)
+    widths2 = []
+    buffer = []
+
+    for row in reader:
+        delim = row.delim()
+        output = []
+
+        # Calculate the field widths
+        for i, cell in enumerate(row):
+            v = cell.value()
+
+            # Create more space in the widths buffer if needed
+            widths2.extend([0] * (i - len(widths2) + 1))
+
+            if i < len(widths):
+                widths2[i] = widths[i]
+            elif len(widths):
+                widths2[i] = widths[-1]
+            else:
+                widths2[i] = max(widths2[i], len(v))
+
+            output.append(v)
+
+        # Save the values into the buffer
+        buffer.append(output)
+
+        # Print and clear the buffer if we're not buffering
+        if not opts.buffered:
+            print_buffer(buffer, widths2)
+            buffer = []
+
+    # Print the buffer if we're buffering
+    print_buffer(buffer, widths2)
+
+
+def print_buffer(buffer, widths):
+    for line in buffer:
+        for i, value in enumerate(line):
+            w = widths[i]
+            f = ('%%%ss' % w)
+
+            if i > 0:
+                sys.stdout.write(opts.padding)
+
+            sys.stdout.write(f % value)
+
+        sys.stdout.write('\n')
+
+
+##############################################################################
+# ENTRY POINT
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit(errno.EOWNERDEAD)
+
+
+# vim:ft=python
