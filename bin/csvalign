@@ -69,10 +69,11 @@ Options:
   -p, --padding=PAD     Characters to use as padding between the columns.
                         The default is two spaces.
 
-  -w, --width=WIDTHS    Comma separate list of field widths.  The last number
-                        is the default width of any column without a specified
-                        width.  Setting this options disables buffering so the
-                        output is faster.
+  -w, --width=WIDTHS    Comma separate list of field widths.  A positive number
+                        right aligns, a negative number left aligns.  The last
+                        number is the default width of any column without a
+                        width specified.  Setting this options disables
+                        buffering so the output is faster.
 
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
@@ -109,7 +110,7 @@ def main():
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
         elif c in ('p', 'padding')      : opts.padding = getopt.optarg
         elif c in ('w', 'width')        :
-            opts.widths.extend(getopt.optarg.split(','))
+            opts.widths = getopt.optarg.split(',')
             opts.buffered = False
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
@@ -189,7 +190,7 @@ def csvalign(file, widths):
             elif len(widths):
                 widths2[i] = widths[-1]
             else:
-                widths2[i] = max(widths2[i], len(v))
+                widths2[i] = min(widths2[i], -len(v))
 
             output.append(v)
 
