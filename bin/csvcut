@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ##############################################################################
-# Cut columns from a csv file using column names.
+# Rearrange columns in a csv file.
 #
 
 ##############################################################################
@@ -49,7 +49,7 @@ class opts:
 
 def usage():
     '''\
-Print csv rows in a more human-readable format.
+Rearrange columns in a csv file.
 
 usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
