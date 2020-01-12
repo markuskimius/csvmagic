@@ -1,65 +1,151 @@
 # csvread
 A command line utility to display csv rows in a more human-readable format.
 
-## Statement of Problem
 
-This utility solves these problems:
+## Motivation
 
-- csv files are hard to read because the columns don't align.
+csv files often have these readability problems:
+
+- csv files are hard to read because the columns don't always align.
 - csv files with many columns are hard to read because the rows wrap around the
   screen.
 
-## Example
+One way to solve these problems is to display them vertically.  For example,
+given the following csv file:
 
-Given the following csv file,
 ```csv
-ID,NAME,EMAIL,TEL
-1,John,john@email.com,111-111-1111
-2,Jane,jane@email.com,222-222-2222
+ID,FIRST_NAME,LAST_NAME,EMAIL,TEL
+1001,John,Doe,jdoe@email.com,111-111-1111
+1002,Jane,Smith,jsmith@email.com,222-222-2222
 ```
 
-Running csvread on it gives the following output:
+its vertical equivalent is:
+
+```
+ID         : 1001
+FIRST_NAME : John
+LAST_NAME  : Doe
+EMAIL      : jdoe@email.com
+TEL        : 111-111-1111
+
+ID         : 1002
+FIRST_NAME : Jane
+LAST_NAME  : Smith
+EMAIL      : jsmith@email.com
+TEL        : 222-222-2222
+```
+
+csvread is such utility for displaying a csv file in a vertical format.
+
+
+## Basic Usage
+
+To display the csv file in vertical format, simply pass the filename to csvread:
 ```sh
-$ csvread names.csv
-ID    : 1
-NAME  : John
-EMAIL : john@email.com
-TEL   : 111-111-1111
+$ csvread users.csv
+ID         : 1001
+FIRST_NAME : John
+LAST_NAME  : Doe
+EMAIL      : jdoe@email.com
+TEL        : 111-111-1111
 
-ID    : 2
-NAME  : Jane
-EMAIL : jane@email.com
-TEL   : 222-222-2222
+ID         : 1002
+FIRST_NAME : Jane
+LAST_NAME  : Smith
+EMAIL      : jsmith@email.com
+TEL        : 222-222-2222
 ```
+
+
+## Delimiter
 
 By default, csvread tries to guess the delimiter from the comma, tab, pipe, or
 the SOH (ASCII 1) characters.  To use another delimiter or to force a
-delimiter, `-d` option along with the delimiter may be passed to csvread.
+delimiter, use the `-d` option.
 
 For example, to force csvread to use the carrot (`^`) as the delimiter:
 ```sh
-$ csvread -d^ names.csv
-ID    : 1
-NAME  : John
-EMAIL : john@email.com
-TEL   : 111-111-1111
+$ csvread -d^ users.rsv
+ID         : 1001
+FIRST_NAME : John
+LAST_NAME  : Doe
+EMAIL      : jdoe@email.com
+TEL        : 111-111-1111
 
-ID    : 2
-NAME  : Jane
-EMAIL : jane@email.com
-TEL   : 222-222-2222
+ID         : 1002
+FIRST_NAME : Jane
+LAST_NAME  : Smith
+EMAIL      : jsmith@email.com
+TEL        : 222-222-2222
 ```
 
-csvread's output can be piped to [cgrep] to filter records by its field value:
+It is also possible to tell csvread to use an alternate set of characters from
+which the guess a file's delimiter by setting the environment variable
+`CSV_DELIMS`.  For example, to tell csvread to guess delimiters from a comma
+and a carrot in BASH:
+
 ```sh
-$ csvread names.csv | cgrep "^NAME *: John$"
-ID    : 1
-NAME  : John
-EMAIL : john@email.com
-TEL   : 111-111-1111
+$ export CSV_DELIMS=,^
+$ csvread users.rsv
+ID         : 1001
+FIRST_NAME : John
+LAST_NAME  : Doe
+EMAIL      : jdoe@email.com
+TEL        : 111-111-1111
+
+ID         : 1002
+FIRST_NAME : Jane
+LAST_NAME  : Smith
+EMAIL      : jsmith@email.com
+TEL        : 222-222-2222
 ```
 
-## Usage
+
+## Selection
+
+csvread's output can be piped to [cgrep] to select records by its field value:
+```sh
+$ csvread users.csv | cgrep "^LAST_NAME *: Doe$"
+ID         : 1001
+FIRST_NAME : John
+LAST_NAME  : Doe
+EMAIL      : jdoe@email.com
+TEL        : 111-111-1111
+```
+
+
+## Translation Library
+
+A plugin library may be specified to translate the values before they are
+output.
+
+As an example, csvread provides a plugin to translate [FIX] messages.  FIX
+messages do not have headers, so use the `-n` option along with the `-t` option
+to load the `fix` library in the `plugins` directory:
+```sh
+$ csvread -ntplugins/fix fixmessages.csv
+```
+... which takes the following content in fixmessages.csv:
+```
+8=FIX.4.2,35=D,49=CLIENT,56=BROKER,54=1,38=7000,55=AMZN,40=1
+```
+... to produces the following output:
+```
+8    BeginString  : FIX.4.2
+35   MsgType      : D .. NewOrderSingle
+49   SenderCompID : CLIENT
+56   TargetCompID : BROKER
+54   Side         : 1 .. Buy
+38   OrderQty     : 7000
+55   Symbol       : AMZN
+40   OrdType      : 1 .. Market
+```
+To specify the library by its base name (without qualifying it by its path) set
+the `CSV_PLUGINS_PATH` environment variable to the directory containing the
+plugins.
+
+
+## Man Page
 ```
 NAME
        csvread - print csv rows in a more human-readable format
@@ -115,35 +201,6 @@ SEE ALSO
        cgrep(1)
 ```
 
-## Translation Library
-
-A plugin library may be specified to translate the values before they are
-output.
-
-As an example, csvread provides a plugin to translate [FIX] messages.  FIX
-messages do not have headers, so use the `-n` option along with the `-t` option
-to load the `fix` library in the `plugins` directory:
-```sh
-$ csvread -ntplugins/fix fixmessages.csv
-```
-... which takes the following content in fixmessages.csv:
-```
-8=FIX.4.2,35=D,49=CLIENT,56=BROKER,54=1,38=7000,55=AMZN,40=1
-```
-... to produces the following output:
-```
-8    BeginString  : FIX.4.2
-35   MsgType      : D .. NewOrderSingle
-49   SenderCompID : CLIENT
-56   TargetCompID : BROKER
-54   Side         : 1 .. Buy
-38   OrderQty     : 7000
-55   Symbol       : AMZN
-40   OrdType      : 1 .. Market
-```
-To specify the library by its base name (without qualifying it by its path) set
-the `CSV_PLUGINS_PATH` environment variable to the directory containing the
-plugins.
 
 [cgrep]: https://github.com/markuskimius/cgrep
 [FIX]: http://fiximate.fixtrading.org/
