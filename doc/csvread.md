@@ -198,7 +198,7 @@ DESCRIPTION
               A colon-separated list of directories in which the plugin library is searched.
 
 SEE ALSO
-       cgrep(1)
+       csvalign(1), csvcut(1), cgrep(1)
 ```
 
 

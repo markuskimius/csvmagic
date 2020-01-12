@@ -140,5 +140,61 @@ ID^EMAIL
 ```
 
 
+## Man Page
+```
+NAME
+       csvcut - rearrange columns of a csv file or selectively display cell values
+
+SYNOPSIS
+       csvcut [-h] [-f FIELDS] [-d DELIM] [FILE [FILE ...]]
+
+DESCRIPTION
+       csvcut extract columns and values from a comma-separated value (csv) file FILE.
+
+   Options
+       -h, --help
+              Output a usage message and exit.
+
+       -f FIELDS, --fields=FIELDS
+              FIELDS  is  a  comma-separated  list of columns or values to select from the csv
+              file.  See Selector Format below on how to select column(s) or value(s).
+
+   Selector Format
+       INT    An integer select the column by its number.  The leftmost column is 1.
+
+       INT1-[INT2]
+              Select all columns between INT1 and INT2, inclusive.  If  INT2  is  omitted  all
+              columns from INT1 to the last column are selected.
+
+       [=]STRING
+              Select the column by its name.  The string may be prefixed by the equal sign (=)
+              to avoid other interpretations.
+
+       /REGEX/[i]
+              Select all columns whose name matches the regular expression REGEX.  The i modi-
+              fier forces case-insensitive match.
+
+       ~/REGEX/[i]
+              Select  all  field values matching the regular expression REGEX.  The i modifier
+              forces case-insensitive match.
+
+       -      Select all fields that have not already been selected.
+
+       No selector may include the comma character.
+
+   Environment Variables
+       CSV_DELIMS
+              A set of characters used to guess the delimiter of a csv  file.   The  guesswork
+              happens when reading the first line of the first FILE, by testing each character
+              present in CSV_DELIMS for the character with the most occurrence  in  the  line.
+              If  any  of  the characters occur the same number of times (including zero), the
+              earlier character in the variable is chosen.  If the environment variable is not
+              set, it defaults to ',\t|\x0001'.  CSV_DELIMS may include escape characters.
+
+SEE ALSO
+       csvread(1), csvcut(1)
+```
+
+
 [rfc4180]: https://tools.ietf.org/html/rfc4180
 

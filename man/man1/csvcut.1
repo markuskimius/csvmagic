@@ -1,0 +1,54 @@
+.TH CSVCUT 1 "12 January 2020"
+.SH NAME
+csvcut \- rearrange columns of a csv file or selectively display cell values
+.SH SYNOPSIS
+\fBcsvcut\fP [\-h] [\-f \fIFIELDS\fP] [\-d \fIDELIM\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+.SH DESCRIPTION
+\fBcsvcut\fP extract columns and values from a comma\-separated value (csv)
+file \fIFILE\fP.
+.SS Options
+.TP
+\fB-h\fP, \fB--help\fP
+Output a usage message and exit.
+.TP
+\fB-f\fP \fIFIELDS\fP, \fB--fields\fP=\fIFIELDS\fP
+\fIFIELDS\fP is a comma-separated list of columns or values to select from the
+csv file.  See \fBSelector Format\fP below on how to select column(s) or
+value(s).
+.SS Selector Format
+.TP
+\fBINT\fP
+An integer select the column by its number.  The leftmost column is 1.
+.TP
+\fBINT1-[INT2]\fP
+Select all columns between \fBINT1\fP and \fBINT2\fP, inclusive.  If \fBINT2\fP
+is omitted all columns from \fBINT1\fP to the last column are selected.
+.TP
+\fB[=]STRING\fP
+Select the column by its name.  The string may be prefixed by the equal sign
+(\fB=\fP) to avoid other interpretations.
+.TP
+\fB/REGEX/[i]\fP
+Select all columns whose name matches the regular expression \fBREGEX\fP.  The
+\fBi\fP modifier forces case-insensitive match.
+.TP
+\fB~/REGEX/[i]\fP
+Select all field values matching the regular expression \fBREGEX\fP.  The
+\fBi\fP modifier forces case-insensitive match.
+.TP
+\fB-\fP
+Select all fields that have not already been selected.
+.TP
+No selector may include the comma character.
+.SS Environment Variables
+.TP
+\fBCSV_DELIMS\fP
+A set of characters used to guess the delimiter of a csv file.  The guesswork
+happens when reading the first line of the first \fIFILE\fP, by testing each
+character present in \fBCSV_DELIMS\fP for the character with the most
+occurrence in the line.  If any of the characters occur the same number of
+times (including zero), the earlier character in the variable is chosen.
+If the environment variable is not set, it defaults to ',\\t|\\x0001'.
+\fBCSV_DELIMS\fP may include escape characters.
+.SH "SEE ALSO"
+csvread(1), csvcut(1)
