@@ -170,7 +170,7 @@ def smart_open(filename, mode='r'):
 
 
 def csvalign(file, widths):
-    reader = libcsv.Reader(file, delim=opts.delim, has_header=True)
+    reader = libcsv.Reader(file, delim=opts.delim, has_header=False)
     widths2 = []
     buffer = []
 
