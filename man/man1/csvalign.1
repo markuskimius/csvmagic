@@ -36,7 +36,7 @@ happens when reading the first line of the first \fIFILE\fP, by testing each
 character present in \fBCSV_DELIMS\fP for the character with the most
 occurrence in the line.  If any of the characters occur the same number of
 times (including zero), the earlier character in the variable is chosen.
-If the environment variable is not set, it defaults to ',\\t|\\x0001'.
+If the environment variable is not set, it defaults to ',\\t|\\u0001'.
 \fBCSV_DELIMS\fP may include escape characters.
 .SH "SEE ALSO"
 csvread(1), csvcut(1)
