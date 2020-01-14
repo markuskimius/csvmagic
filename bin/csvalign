@@ -25,6 +25,7 @@ fi
 import os
 import re
 import sys
+import math
 import errno
 import libcsv
 import getopts
@@ -44,6 +45,7 @@ class opts:
     delim = None
     padding = '  '
     buffered = True
+    numbered = False
 
 
 ##############################################################################
@@ -75,6 +77,8 @@ Options:
                         width specified.  Setting this options disables
                         buffering so the output is faster.
 
+  -n, --number          Show column numbers.
+
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
                         csv file.  The guesswork happens when reading  the
@@ -102,6 +106,7 @@ def main():
         'd' : 1,           'delim'    : 1,
         'p' : 1,           'padding'  : 1,
         'w' : is_intarray, 'width'    : is_intarray,
+        'n' : 0,           'number'   : 0,
         'h' : 0,           'help'     : 0,
     })
 
@@ -112,6 +117,7 @@ def main():
         elif c in ('w', 'width')        :
             opts.widths = getopt.optarg.split(',')
             opts.buffered = False
+        elif c in ('n', 'number')       : opts.numbered = True
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -174,7 +180,7 @@ def csvalign(file, widths):
     widths2 = []
     buffer = []
 
-    for row in reader:
+    for rownum, row in enumerate(reader):
         delim = row.delim()
         output = []
 
@@ -192,6 +198,10 @@ def csvalign(file, widths):
             else:
                 widths2[i] = min(widths2[i], -len(v))
 
+                # Adjust width for column numbers, if any
+                if opts.numbered:
+                    widths2[i] = min(widths2[i], -int(math.log(i+1,10))-1)
+
             output.append(v)
 
         # Save the values into the buffer
@@ -199,11 +209,30 @@ def csvalign(file, widths):
 
         # Print and clear the buffer if we're not buffering
         if not opts.buffered:
+            if opts.numbered and rownum == 0:
+                print_colnums(widths2)
+
             print_buffer(buffer, widths2)
             buffer = []
 
     # Print the buffer if we're buffering
-    print_buffer(buffer, widths2)
+    if opts.buffered:
+        if opts.numbered:
+            print_colnums(widths2)
+
+        print_buffer(buffer, widths2)
+
+
+def print_colnums(widths):
+    for i, w in enumerate(widths):
+        f = ('%%%ss' % w)
+
+        if i > 0:
+            sys.stdout.write(opts.padding)
+
+        sys.stdout.write(f % (i+1))
+
+    sys.stdout.write('\n')
 
 
 def print_buffer(buffer, widths):
