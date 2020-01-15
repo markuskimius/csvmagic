@@ -25,7 +25,6 @@ fi
 import os
 import re
 import sys
-import math
 import errno
 import libcsv
 import getopts
@@ -200,7 +199,7 @@ def csvalign(file, widths):
 
                 # Adjust width for column numbers, if any
                 if opts.numbered:
-                    widths2[i] = min(widths2[i], -int(math.log(i+1,10))-1)
+                    widths2[i] = min(widths2[i], -len(format_colnum(i)))
 
             output.append(v)
 
@@ -223,6 +222,10 @@ def csvalign(file, widths):
         print_buffer(buffer, widths2)
 
 
+def format_colnum(colnum):
+    return str(colnum+1)
+
+
 def print_colnums(widths):
     for i, w in enumerate(widths):
         f = ('%%%ss' % w)
@@ -230,7 +233,7 @@ def print_colnums(widths):
         if i > 0:
             sys.stdout.write(opts.padding)
 
-        sys.stdout.write(f % (i+1))
+        sys.stdout.write(f % format_colnum(i))
 
     sys.stdout.write('\n')
 
