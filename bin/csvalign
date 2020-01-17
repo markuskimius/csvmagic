@@ -181,11 +181,14 @@ def csvalign(file, widths):
 
     for rownum, row in enumerate(reader):
         delim = row.delim()
-        output = []
+        height = 0
+        moutput = []
 
-        # Calculate the field widths
+        # Calculate the field widths and height
         for i, cell in enumerate(row):
-            v = cell.value()
+            value = cell.value()
+            mvalue = value.split('\n')   # Multiline value
+            height = max(height, len(mvalue))
 
             # Create more space in the widths buffer if needed
             widths2.extend([0] * (i - len(widths2) + 1))
@@ -195,16 +198,26 @@ def csvalign(file, widths):
             elif len(widths):
                 widths2[i] = widths[-1]
             else:
-                widths2[i] = min(widths2[i], -len(v))
+                # Adjust the column width for the data in the cell
+                for v in mvalue:
+                    widths2[i] = min(widths2[i], -len(v))
 
-                # Adjust width for column numbers, if any
+                # Adjust the column width for the column number
                 if opts.numbered:
                     widths2[i] = min(widths2[i], -len(format_colnum(i)))
 
-            output.append(v)
+            moutput.append(mvalue)
 
-        # Save the values into the buffer
-        buffer.append(output)
+        # Save the multiline values into the buffer, one line per buffer index
+        for i in range(height):
+            line = []
+
+            for j in range(len(moutput)):
+                v = moutput[j][i] if i < len(moutput[j]) else ''
+
+                line.append(v)
+
+            buffer.append(line)
 
         # Print and clear the buffer if we're not buffering
         if not opts.buffered:
