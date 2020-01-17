@@ -62,8 +62,10 @@ class Reader(object):
             line = self.__readline()
             if line is None: break
 
-            gotline = True
+            if gotline: buf += '\n'
             buf += line
+
+            gotline = True
 
             if self.__is_validrow(buf): break
 
