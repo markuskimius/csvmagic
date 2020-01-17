@@ -90,7 +90,7 @@ class Reader(object):
         if line == '':
             line = None
         else:
-            line = line.rstrip('\r\n')
+            line = line.rstrip('\n')
 
         if self.__delim is None and line is not None:
             self.__guessdelim(line)
