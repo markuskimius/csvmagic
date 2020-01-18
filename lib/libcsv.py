@@ -233,7 +233,7 @@ class Row(object):
 # CSV CELL
 
 class Cell(object):
-    __quoted_field_re = re.compile(r'^"(.*)"$')
+    __quoted_field_re = re.compile(r'^"((.|\s)*)"$')
 
     def __init__(self, rownum, colname, colnum, value):
         self.__rownum = rownum
