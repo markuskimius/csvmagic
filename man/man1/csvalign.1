@@ -2,17 +2,17 @@
 .SH NAME
 csvalign \- print csv rows with its columns aligned
 .SH SYNOPSIS
-\fBcsvalign\fP [\-h] [\-p \fIPADDING\fP] [\-w \fIWIDTHS\fP] [\-d \fIDELIM\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvalign\fP [\-h] [\-n] [\-p \fIPADDING\fP] [\-w \fIWIDTHS\fP] [\-d \fIDELIM\fP] [\fIFILE\fP [\fIFILE\fP ...]]
 .SH DESCRIPTION
-\fBcsvalign\fP displays a comma\-separated value (csv) file \fIFILE\fP with its
+\fBcsvalign\fP displays the comma\-separated value (csv) file \fIFILE\fP with its
 columns aligned.
-
-This purpose of this layout is to make it easier to associate each value with
-its column.
 .SS Options
 .TP
 \fB-h\fP, \fB--help\fP
 Output a usage message and exit.
+.TP
+\fB-n\fP, \fB--number\fP
+Show column numbers.
 .TP
 \fB-p\fP \fIPADDING\fP, \fB--padding\fP=\fIPADDING\fP
 Use \fIPADDING\fP as the padding between the columns.  The default is two
