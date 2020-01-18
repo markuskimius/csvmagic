@@ -52,14 +52,14 @@ class opts:
 
 def usage():
     '''\
-Align columns in a csv file.
+Display the csv file(s) with its column aligned.
 
 usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
 Options:
-  FILE                  csv file(s) to cut.
+  FILE                  csv file(s) to align.
 
-  -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
+  -d, --delim=DELIM     Use DELIM as the value delimiter, where DELIM may be
                         'p' for the pipe (|), 't' for the tab (\\t), 'a' for
                         the SOH (ASCII 1), or other string literal of one or
                         more characters and Python  string  escape  sequences.
@@ -70,11 +70,11 @@ Options:
   -p, --padding=PAD     Characters to use as padding between the columns.
                         The default is two spaces.
 
-  -w, --width=WIDTHS    Comma separate list of field widths.  A positive number
-                        right aligns, a negative number left aligns.  The last
-                        number is the default width of any column without a
-                        width specified.  Setting this options disables
-                        buffering so the output is faster.
+  -w, --width=WIDTHS    Comma separate list of field widths.  A positive
+                        integer right aligns, a negative integer left aligns.
+                        The last number is the default width of any column
+                        without a width specified.  Setting this options
+                        disables buffering so the output is faster.
 
   -n, --number          Show column numbers.
 

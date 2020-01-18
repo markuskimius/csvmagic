@@ -56,16 +56,14 @@ class opts:
 
 def usage():
     '''\
-Print csv rows in a more human-readable format.
+Display one or more csv file(s) in a vertical format, with each field displayed
+on its own line with the column header to its left.
 
 usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
 Options:
   FILE                  csv file(s) to read.
 
-  -n, --no-header       The file contains no header.  The values are numbered
-                        by their column positions instead.
-  -s, --strip-quotes    Strip quotes from field values.
   -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
                         'p' for the pipe (|), 't' for the tab (\\t), 'a' for
                         the SOH (ASCII 1), or other string literal of one or
@@ -73,6 +71,12 @@ Options:
                         DELIM  may  include  escape characters.  By default the
                         delimiter is guessed from the characters in the
                         CSV_DELIMS environment variable.
+
+  -n, --no-header       The file contains no header.  The values are numbered
+                        by their column positions instead.
+
+  -s, --strip-quotes    Strip quotes from field values.
+
   -t, --translator=LIB  Use the plugin library LIB to preprocess the values
                         before display.  LIB may be the full  path  to  the
                         library  without  the  .py suffix, or it may just be

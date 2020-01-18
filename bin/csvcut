@@ -49,24 +49,27 @@ class opts:
 
 def usage():
     '''\
-Rearrange columns in a csv file.
+Extract and rearrange columns in a csv file.
 
 usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
 Options:
   FILE                  csv file(s) to cut.
 
-  -f, --fields=FIELDS   Fields to cut.  FIELDS is a comma separated list of
-                        fields to cut from the files.  The field may be
-                        specified using:
+  -f, --fields=FIELDS   Fields to extract.  FIELDS is a comma separated list of
+                        field criteria to extract from the files.  Each
+                        criteria may be one of:
 
                         * COLNUM:  The column number.  The first column is 1.
                           The last column is -1.
 
-                        * RANGE:  A range of columns in the format
-                          COLNUM-[COLNUM], both inclusive.  If the second
-                          COLNUM is omitted, it is considered to the last
-                          column.
+                        * COLNUM-[COLNUM]:  A range of columns, both inclusive.
+                          The first COLNUM must be a lower number than the
+                          second COLNUM.  If the second COLNUM is omitted, it
+                          is considered to the last column.
+
+                        * -:  A hyphen extracts all columns that has yet to be
+                          extracted by the prior criteria.
 
                         * COLNAME:  The name of the column from the first row
                           of the CSV file.  If the column name is invalid, a
@@ -80,6 +83,9 @@ Options:
                             i  case insensitive match.
 
                         * ~/REGEX/[MOD]:  The values matching this regex.
+
+                        The order in which the criteria are specified is the
+                        order in which they are output.
 
   -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
                         'p' for the pipe (|), 't' for the tab (\\t), 'a' for
