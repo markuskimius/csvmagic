@@ -220,7 +220,12 @@ def csvread(file):
             else:
                 val = cell.value()
 
-            print('%-*s : %s' % (width, colname, val))
+            # Print each line of the cell value
+            for i, v in enumerate(val.split('\n')):
+                if i == 0:
+                    print('%-*s : %s' % (width, colname, v))
+                else:
+                    print('%-*s   %s' % (width, '', v))
 
         print('')
 
