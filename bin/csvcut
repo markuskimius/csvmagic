@@ -42,6 +42,7 @@ class opts:
     files = []
     delim = None
     fields = None
+    multitable = False
 
 
 ##############################################################################
@@ -95,6 +96,9 @@ Options:
                         delimiter is guessed from the characters in the
                         CSV_DELIMS environment variable.
 
+  -m, --multitable      Multitable support.  One csv file may include multiple
+                        csv data by separating them by an empty line.
+
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
                         csv file.  The guesswork happens when reading  the
@@ -121,6 +125,7 @@ def main():
     getopt = getopts.getopts(sys.argv, {
         'd' : 1, 'delim'      : 1,
         'f' : 1, 'fields'     : 1,
+        'm' : 0, 'multitable' : 0,
         'h' : 0, 'help'       : 0,
     })
 
@@ -128,6 +133,7 @@ def main():
         if c in ('-')                   : opts.files.append(getopt.optarg)
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
         elif c in ('f', 'fields')       : opts.fields = parse_fieldselector(getopt.optarg)
+        elif c in ('m', 'multitable')   : opts.multitable = True
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -247,7 +253,7 @@ def csvcut(file, fields):
 
 class RowIterator(object):
     def __init__(self, file, delim):
-        self.__reader = libcsv.Reader(file, delim=delim, has_header=True)
+        self.__reader = libcsv.Reader(file, delim=delim, has_header=True, is_multitable=opts.multitable)
 
     def __iter__(self):
         header = self.__reader.header()

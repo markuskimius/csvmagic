@@ -45,6 +45,7 @@ class opts:
     padding = '  '
     buffered = True
     numbered = False
+    multitable = False
 
 
 ##############################################################################
@@ -79,6 +80,9 @@ Options:
 
   -n, --number          Show column numbers.
 
+  -m, --multitable      Multitable support.  One csv file may include multiple
+                        csv data by separating them by an empty line.
+
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
                         csv file.  The guesswork happens when reading  the
@@ -103,11 +107,12 @@ def main():
     errcount = 0
 
     getopt = getopts.getopts(sys.argv, {
-        'd' : 1,           'delim'    : 1,
-        'p' : 1,           'padding'  : 1,
-        'w' : is_intarray, 'width'    : is_intarray,
-        'n' : 0,           'number'   : 0,
-        'h' : 0,           'help'     : 0,
+        'd' : 1,           'delim'      : 1,
+        'p' : 1,           'padding'    : 1,
+        'w' : is_intarray, 'width'      : is_intarray,
+        'n' : 0,           'number'     : 0,
+        'm' : 0,           'multitable' : 0,
+        'h' : 0,           'help'       : 0,
     })
 
     for c in getopt:
@@ -118,6 +123,7 @@ def main():
             opts.widths = getopt.optarg.split(',')
             opts.buffered = False
         elif c in ('n', 'number')       : opts.numbered = True
+        elif c in ('m', 'multitable')   : opts.multitable = True
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -182,7 +188,7 @@ def smart_open(filename, mode='r'):
 
 
 def csvalign(file, widths):
-    reader = libcsv.Reader(file, delim=opts.delim, has_header=False)
+    reader = libcsv.Reader(file, delim=opts.delim, has_header=False, is_multitable=opts.multitable)
     has_more_tables = False
     widths2 = []
     buffer = []

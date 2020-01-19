@@ -49,6 +49,7 @@ class opts:
     has_header = True
     strip_quotes = False
     translator = None
+    multitable = False
 
 
 ##############################################################################
@@ -83,6 +84,9 @@ Options:
                         the library name in which case CSV_PLUGINS_PATH is
                         searched for the library.
 
+  -m, --multitable      Multitable support.  One csv file may include multiple
+                        csv data by separating them by an empty line.
+
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
                         csv file.  The guesswork happens when reading  the
@@ -113,6 +117,7 @@ def main():
         's' : 0, 'strip-quotes' : 0,
         'd' : 1, 'delim'        : 1,
         't' : 1, 'translator'   : 1,
+        'm' : 0, 'multitable'   : 0,
         'h' : 0, 'help'         : 0,
     })
 
@@ -122,6 +127,7 @@ def main():
         elif c in ('n', 'no-header')    : opts.has_header = False
         elif c in ('s', 'strip-quotes') : opts.strip_quotes = True
         elif c in ('t', 'translator')   : opts.translator = load_translator(getopt.optarg)
+        elif c in ('m', 'multitable')   : opts.multitable = True
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -192,7 +198,7 @@ def smart_open(filename, mode='r'):
 
 
 def csvread(file):
-    reader = libcsv.Reader(file, delim=opts.delim, has_header=opts.has_header)
+    reader = libcsv.Reader(file, delim=opts.delim, has_header=opts.has_header, is_multitable=opts.multitable)
     translator = opts.translator.Translator()
 
     # Data rows
