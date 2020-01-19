@@ -89,7 +89,7 @@ class Reader(object):
             raise Reader.TableBreak()
 
         if gotline:
-            values = self.__split(buf)
+            values = self.__split(buf) if len(buf) else []
             header = self.__firstrow
 
             if header is None and self.__has_header:

@@ -196,7 +196,7 @@ def csvalign(file, widths):
     try:
         for rownum, row in enumerate(reader):
             delim = row.delim()
-            height = 0
+            height = 1
             moutput = []
 
             # Calculate the field widths and height
@@ -268,7 +268,8 @@ def print_colnums(widths):
 
         sys.stdout.write(f % format_colnum(i))
 
-    sys.stdout.write('\n')
+    if len(widths):
+        sys.stdout.write('\n')
 
 
 def print_buffer(buffer, widths):
