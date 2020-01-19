@@ -141,7 +141,15 @@ def main():
     # Read each file
     for f in opts.files:
         with smart_open(f) as fo:
-            csvread(fo)
+            got_more = True
+
+            # one file may have multiple tables -- read all
+            while got_more:
+                try:
+                    csvread(fo)
+                    got_more = False
+                except libcsv.Reader.TableBreak as e:
+                    got_more = True
 
 
 def arg_to_delim(delim):
