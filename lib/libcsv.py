@@ -24,7 +24,7 @@ DELIMS = os.environ.get('CSV_DELIMS', ',\\t|\\u0001')
 class Reader(object):
     class TableBreak(Exception): pass
 
-    def __init__(self, file, delim=None, has_header=False, is_multitable=True):
+    def __init__(self, file, delim=None, has_header=False, is_multitable=False):
         self.__init_delim = delim
         self.__has_header = has_header
         self.__is_multitable = is_multitable
