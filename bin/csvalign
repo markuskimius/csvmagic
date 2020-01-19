@@ -68,7 +68,8 @@ Options:
                         CSV_DELIMS environment variable.
 
   -p, --padding=PAD     Characters to use as padding between the columns.
-                        The default is two spaces.
+                        Escape sequences such as \\t are accepted.  The default
+                        is two spaces.  
 
   -w, --width=WIDTHS    Comma separate list of field widths.  A positive
                         integer right aligns, a negative integer left aligns.
@@ -119,6 +120,9 @@ def main():
         elif c in ('n', 'number')       : opts.numbered = True
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
+
+    # Translate backslashes
+    opts.padding = opts.padding.encode().decode('unicode_escape')
 
     # Sanity check
     if errcount:
