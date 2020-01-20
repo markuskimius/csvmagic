@@ -1,0 +1,31 @@
+FIRST_NAME : "John"
+LAST_NAME  : "Doe"
+NOTES      : "Turns in homework on time,
+             good with ""classmates"""
+EMAIL      : "jdoe@email.com"
+
+FIRST_NAME : "Jane"
+LAST_NAME  : "Smith"
+NOTES      : "Good student, works hard"
+EMAIL      : "jsmith@email.com"
+
+FIRST_NAME : TICKER
+LAST_NAME  : SEDOL
+NOTES      : ISIN
+EMAIL      : CUSIP
+
+FIRST_NAME : AMZN
+LAST_NAME  : 2000019
+NOTES      : US0231351067
+EMAIL      : 023135106
+
+FIRST_NAME : IBM
+LAST_NAME  : 2005973
+NOTES      : US4592001014
+EMAIL      : 459200101
+
+FIRST_NAME : MSFT
+LAST_NAME  : 2588173
+NOTES      : US5949181045
+EMAIL      : 594918104
+

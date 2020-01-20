@@ -1,0 +1,10 @@
+FIRST_NAME  LAST_NAME  NOTES                        EMAIL             
+"John"      "Doe"      "Turns in homework on time,  "jdoe@email.com"  
+                       good with ""classmates"""                      
+"Jane"      "Smith"    "Good student, works hard"   "jsmith@email.com"
+
+TICKER  SEDOL    ISIN          CUSIP    
+AMZN    2000019  US0231351067  023135106
+IBM     2005973  US4592001014  459200101
+MSFT    2588173  US5949181045  594918104
+

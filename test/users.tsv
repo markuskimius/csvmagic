@@ -1,4 +1,4 @@
 ID	FIRST_NAME	LAST_NAME	EMAIL	TEL
-1001	John	Doe	jdoe@email.com	111-111-1111
-1002	Jane	Smith	jsmith@email.com	222-222-2222
+1001	"John"	"Doe"	"jdoe@email.com"	"111-111-1111"
+1002	"Jane"	"Smith"	"jsmith@email.com"	"222-222-2222"
 

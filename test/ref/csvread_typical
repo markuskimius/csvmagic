@@ -1,0 +1,15 @@
+ID         : 101
+FIRST_NAME : "John"
+LAST_NAME  : "Doe"
+NOTES      : "Turns in homework on time,
+             good with ""classmates"""
+EMAIL      : "jdoe@email.com"
+TEL        : "111-111-1111"
+
+ID         : 102
+FIRST_NAME : "Jane"
+LAST_NAME  : "Smith"
+NOTES      : "Good student, works hard"
+EMAIL      : "jsmith@email.com"
+TEL        : "222-222-2222"
+

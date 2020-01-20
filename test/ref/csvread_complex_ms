@@ -1,0 +1,26 @@
+FIRST_NAME : John
+LAST_NAME  : Doe
+NOTES      : Turns in homework on time,
+             good with ""classmates""
+EMAIL      : jdoe@email.com
+
+FIRST_NAME : Jane
+LAST_NAME  : Smith
+NOTES      : Good student, works hard
+EMAIL      : jsmith@email.com
+
+TICKER : AMZN
+SEDOL  : 2000019
+ISIN   : US0231351067
+CUSIP  : 023135106
+
+TICKER : IBM
+SEDOL  : 2005973
+ISIN   : US4592001014
+CUSIP  : 459200101
+
+TICKER : MSFT
+SEDOL  : 2588173
+ISIN   : US5949181045
+CUSIP  : 594918104
+

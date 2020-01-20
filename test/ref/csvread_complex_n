@@ -1,0 +1,36 @@
+1 : FIRST_NAME
+2 : LAST_NAME
+3 : NOTES
+4 : EMAIL
+
+1 : "John"
+2 : "Doe"
+3 : "Turns in homework on time,
+    good with ""classmates"""
+4 : "jdoe@email.com"
+
+1 : "Jane"
+2 : "Smith"
+3 : "Good student, works hard"
+4 : "jsmith@email.com"
+
+1 : TICKER
+2 : SEDOL
+3 : ISIN
+4 : CUSIP
+
+1 : AMZN
+2 : 2000019
+3 : US0231351067
+4 : 023135106
+
+1 : IBM
+2 : 2005973
+3 : US4592001014
+4 : 459200101
+
+1 : MSFT
+2 : 2588173
+3 : US5949181045
+4 : 594918104
+
