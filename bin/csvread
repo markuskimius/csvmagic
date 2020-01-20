@@ -147,15 +147,7 @@ def main():
     # Read each file
     for f in opts.files:
         with smart_open(f) as fo:
-            got_more = True
-
-            # one file may have multiple tables -- read all
-            while got_more:
-                try:
-                    csvread(fo)
-                    got_more = False
-                except libcsv.Reader.TableBreak as e:
-                    got_more = True
+            csvread(fo)
 
 
 def arg_to_delim(delim):
@@ -205,6 +197,9 @@ def csvread(file):
     for row in reader:
         cell_list = []
         has_name = False
+
+        # Skip empty lines
+        if len(row) == 0: continue
 
         # Translate the cells
         for cell in row:

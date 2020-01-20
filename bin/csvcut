@@ -153,16 +153,7 @@ def main():
     # Read each file
     for f in opts.files:
         with smart_open(f) as fo:
-            got_more = True
-
-            # one file may have multiple tables -- cut all
-            while got_more:
-                try:
-                    csvcut(fo, opts.fields)
-                    got_more = False
-                except libcsv.Reader.TableBreak as e:
-                    print('')   # Insert an empty line between tables
-                    got_more = True
+            csvcut(fo, opts.fields)
 
 
 def arg_to_delim(delim):
@@ -235,6 +226,11 @@ def csvcut(file, fields):
         delim = row.delim()
         output = []
 
+        # Empty row prints an empty line
+        if len(row) == 0:
+            print('')
+            continue
+
         # Select the cells
         for selector in fields:
             selected = selector.select(selectable)
@@ -256,12 +252,20 @@ class RowIterator(object):
         self.__reader = libcsv.Reader(file, delim=delim, has_header=True, is_multitable=opts.multitable)
 
     def __iter__(self):
-        header = self.__reader.header()
+        got_header = False
 
-        if header is not None:
-            yield header
+        while True:
+            if got_header:
+                row = next(self.__reader)
+            else:
+                row = self.__reader.header()
+                got_header = True
 
-        for row in self.__reader:
+            if row is None:
+                break
+            elif len(row) == 0 and opts.multitable:
+                got_header = False
+
             yield row
 
     def header(self):

@@ -22,8 +22,6 @@ DELIMS = os.environ.get('CSV_DELIMS', ',\\t|\\u0001')
 # CSV READER
 
 class Reader(object):
-    class TableBreak(Exception): pass
-
     def __init__(self, file, delim=None, has_header=False, is_multitable=True):
         self.__init_delim = delim
         self.__has_header = has_header
@@ -48,6 +46,9 @@ class Reader(object):
             self.__readrow()
 
     def header(self):
+        if self.__has_header and self.__is_sot:
+            self.__readrow()
+
         return self.__firstrow
 
     def next(self):
@@ -83,15 +84,15 @@ class Reader(object):
 
             if self.__is_validrow(buf): break
 
-        # an empty line may be a break before another table
-        if gotline and buf == '' and self.__is_multitable:
-            self.__is_sot = True       # start of new table
-            raise Reader.TableBreak()
-
         if gotline:
             values = self.__split(buf) if len(buf) else []
             header = self.__firstrow
 
+            # empty line starts a new table on next reading
+            if len(values) == 0 and self.__is_multitable:
+                self.__is_sot = True
+
+            # current row becomes the header if header not already set
             if header is None and self.__has_header:
                 header = Row(self.__rownum, header, values, self.__delim)
 

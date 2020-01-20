@@ -142,9 +142,8 @@ def main():
     # Read each file
     for f in opts.files:
         with smart_open(f) as fo:
-            # one file may have multiple tables -- align all
+            # Align all tables in the file
             while csvalign(fo, opts.widths):
-                # Insert an empty line between each table
                 print('')
 
 
@@ -189,61 +188,62 @@ def smart_open(filename, mode='r'):
 
 def csvalign(file, widths):
     reader = libcsv.Reader(file, delim=opts.delim, has_header=False, is_multitable=opts.multitable)
-    has_more_tables = False
+    theres_more = False
     widths2 = []
     buffer = []
 
-    try:
-        for rownum, row in enumerate(reader):
-            delim = row.delim()
-            height = 1
-            moutput = []
+    for rownum, row in enumerate(reader):
+        delim = row.delim()
+        height = 1
+        moutput = []
 
-            # Calculate the field widths and height
-            for i, cell in enumerate(row):
-                value = cell.value()
-                mvalue = value.split('\n')   # Multiline value
-                height = max(height, len(mvalue))
+        # Empty line starts a new table
+        if len(row) == 0 and opts.multitable:
+            theres_more = True
+            break
 
-                # Create more space in the widths buffer if needed
-                widths2.extend([0] * (i - len(widths2) + 1))
+        # Calculate the field widths and height
+        for i, cell in enumerate(row):
+            value = cell.value()
+            mvalue = value.split('\n')   # Multiline value
+            height = max(height, len(mvalue))
 
-                if i < len(widths):
-                    widths2[i] = widths[i]
-                elif len(widths):
-                    widths2[i] = widths[-1]
-                else:
-                    # Adjust the column width for the data in the cell
-                    for v in mvalue:
-                        widths2[i] = min(widths2[i], -len(v))
+            # Create more space in the widths buffer if needed
+            widths2.extend([0] * (i - len(widths2) + 1))
 
-                    # Adjust the column width for the column number
-                    if opts.numbered:
-                        widths2[i] = min(widths2[i], -len(format_colnum(i)))
+            if i < len(widths):
+                widths2[i] = widths[i]
+            elif len(widths):
+                widths2[i] = widths[-1]
+            else:
+                # Adjust the column width for the data in the cell
+                for v in mvalue:
+                    widths2[i] = min(widths2[i], -len(v))
 
-                moutput.append(mvalue)
+                # Adjust the column width for the column number
+                if opts.numbered:
+                    widths2[i] = min(widths2[i], -len(format_colnum(i)))
 
-            # Save the multiline values into the buffer, one line per buffer index
-            for i in range(height):
-                line = []
+            moutput.append(mvalue)
 
-                for j in range(len(moutput)):
-                    v = moutput[j][i] if i < len(moutput[j]) else ''
+        # Save the multiline values into the buffer, one line per buffer index
+        for i in range(height):
+            line = []
 
-                    line.append(v)
+            for j in range(len(moutput)):
+                v = moutput[j][i] if i < len(moutput[j]) else ''
 
-                buffer.append(line)
+                line.append(v)
 
-            # Print and clear the buffer if we're not buffering
-            if not opts.buffered:
-                if opts.numbered and rownum == 0:
-                    print_colnums(widths2)
+            buffer.append(line)
 
-                print_buffer(buffer, widths2)
-                buffer = []
+        # Print and clear the buffer if we're not buffering
+        if not opts.buffered:
+            if opts.numbered and rownum == 0:
+                print_colnums(widths2)
 
-    except libcsv.Reader.TableBreak as e:
-        has_more_tables = True
+            print_buffer(buffer, widths2)
+            buffer = []
 
     # Print the buffer if we're buffering
     if opts.buffered:
@@ -252,7 +252,7 @@ def csvalign(file, widths):
 
         print_buffer(buffer, widths2)
 
-    return has_more_tables
+    return theres_more
 
 
 def format_colnum(colnum):
