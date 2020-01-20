@@ -198,11 +198,11 @@ class Row(object):
     def as_dict(self):
         mydict = dict()
         values = self.__values
-        header = self.__header
-        colcount = max(len(values), len(header or []))
+        header = self.__header.as_list() if self.__header else []
+        colcount = max(len(values), len(header))
 
         for num in range(colcount):
-            key = header[num] if header else None
+            key = header[num] if header else num
             val = values[num] if num < len(values) else None
 
             mydict[key] = val
