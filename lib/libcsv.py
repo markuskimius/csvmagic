@@ -177,6 +177,8 @@ class Reader(object):
 # CSV ROW
 
 class Row(object):
+    __quoted_field_re = re.compile(r'^"((.|\s)*)"$')
+
     def __init__(self, rownum, header, values, delim):
         self.__rownum = rownum
         self.__header = header
@@ -194,6 +196,14 @@ class Row(object):
 
     def as_list(self):
         return self.__values
+
+    def as_list_stripped(self):
+        stripped = []
+
+        for v in self.__values:
+            stripped.append(self.__quoted_field_re.sub(r'\1', v))
+
+        return stripped
 
     def as_dict(self):
         mydict = dict()
