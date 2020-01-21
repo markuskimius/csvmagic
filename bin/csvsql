@@ -1,0 +1,221 @@
+#!/bin/sh
+
+##############################################################################
+# SQL query csv file(s).
+#
+
+##############################################################################
+# BOOTSTRAP
+#
+# Include ../lib in the search path before calling python.
+# (Thanks to https://unix.stackexchange.com/questions/20880)
+#
+if "true" : '''\'
+then
+    export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+
+    exec python "$0" "$@"
+    exit 127
+fi
+'''
+
+##############################################################################
+# PYTHON CODE BEGINS HERE
+
+import os
+import re
+import sys
+import errno
+import libcsv
+import getopts
+import sqlite3
+
+__copyright__ = 'Copyright 2020 Mark Kim'
+__license__ = 'Apache 2.0'
+
+
+##############################################################################
+# GLOBALS
+
+SCRIPTNAME = os.path.basename(__file__)
+
+class opts:
+    files = []
+    delim = None
+    command = None
+
+
+##############################################################################
+# USAGE
+
+def usage():
+    '''\
+SQL query csv file(s).
+
+usage: {SCRIPTNAME} [OPTIONS] [FILES]
+
+Options:
+  FILE                  csv file(s) to align.
+
+  -c, --command=SQL     SQL commands to execute.
+
+  -d, --delim=DELIM     Use DELIM as the value delimiter, where DELIM may be
+                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
+                        the SOH (ASCII 1), or other string literal of one or
+                        more characters and Python  string  escape  sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
+
+Environment Variables:
+  CSV_DELIMS            A set of characters used to guess the delimiter of a
+                        csv file.  The guesswork happens when reading  the
+                        first  line  of  the first FILE, by testing each
+                        character present in CSV_DELIMS for the character with
+                        the most occurrence in the line.  If any of the
+                        characters occur the same number  of  times  (including
+                        zero),  the  earlier  character  in the variable is
+                        chosen.  If the environment variable is not set, it
+                        defaults to '{libcsv.DELIMS}'.  CSV_DELIMS may include
+                        escape characters.
+
+'''
+
+    print(usage.__doc__.format(**globals()))
+
+
+##############################################################################
+# MAIN
+
+def main():
+    errcount = 0
+
+    getopt = getopts.getopts(sys.argv, {
+        'c' : 1, 'command' : 1,
+        'd' : 1, 'delim'   : 1,
+        'h' : 0, 'help'    : 0,
+    })
+
+    for c in getopt:
+        if c in ('-')                   : opts.files.append(getopt.optarg)
+        elif c in ('c', 'command')      : opts.command = getopt.optarg
+        elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('h', 'help')         : usage(); sys.exit(0)
+        else                            : errcount += 1
+
+    # Sanity check
+    if errcount:
+        sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
+        sys.exit(1)
+
+    # Read from STDIN if no file specified
+    if not opts.files:
+        opts.files.append("-")
+
+    # Instantiate the database
+    db = Database()
+
+    # Load all tables
+    for f in opts.files:
+        db.load(f)
+
+    # Execute SQL commands
+    if opts.command is None:
+        # TODO
+        print('no command')
+    else:
+        db.execute(opts.command)
+
+
+def arg_to_delim(delim):
+    # Delimiter shorthands
+    if delim in ('p'): delim = '|'
+    elif delim in ('t'): delim = '\t'
+    elif delim in ('a'): delim = '\u0001'
+
+    # Translate escape characters
+    delim = delim.encode().decode('unicode_escape')
+
+    return delim
+
+
+def smart_open(filename, mode='r'):
+    '''Open a file for reading, treating '-' as a stdin or stdout, depending on
+    the mode.'''
+
+    if filename == '-':
+        # Duplicate stdin/stdout so the caller can close it without closing stdin.
+        fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
+        fo = os.fdopen(os.dup(fd))
+    else:
+        fo = open(filename, mode)
+
+    return fo
+
+
+class Database(object):
+    def __init__(self):
+        self.__conn = sqlite3.connect('')
+        self.__cursor = self.__conn.cursor()
+        self.__tablenames = []
+
+    def load(self, filename, tablename=None, delim=None):
+        if tablename is None:
+            tablename = os.path.basename(filename)
+            tablename = os.path.splitext(tablename)[0]
+
+        with smart_open(filename) as file:
+            reader = libcsv.Reader(file, delim=delim, has_header=True, is_multitable=False)
+
+            for row in reader:
+                if len(row):
+                    self.insert(tablename, row)
+
+    def insert(self, tablename, row):
+        qs = ','.join(['?'] * len(row))
+
+        if tablename not in self.__tablenames:
+            self.create(tablename, row.header().as_list())
+            self.__tablenames.append(tablename)
+
+        self.execute('insert into %s values (%s)' % (tablename, qs), *row.as_list())
+
+    def create(self, tablenames, fieldnames):
+        self.execute('create table %s (%s)' % (tablenames, ','.join(fieldnames)))
+
+    def execute(self, command, *args):
+        try:
+            # Execute the command and print any rows it returns
+            for i, row in enumerate(self.__cursor.execute(command, args)):
+                values = []
+
+                # Print column names
+                if i == 0:
+                    cols = []
+
+                    for j, cell in enumerate(self.__cursor.description):
+                        cols.append(str(cell[0]))
+
+                    print(','.join(cols))
+
+                # Print row values
+                for j, cell in enumerate(row):
+                    values.append(str(cell))
+
+                print(','.join(values))
+        except sqlite3.OperationalError as e:
+            sys.stderr.write('%s -- %s\n' % (command, str(e)))
+
+
+##############################################################################
+# ENTRY POINT
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit(errno.EOWNERDEAD)
+
+
+# vim:ft=python
