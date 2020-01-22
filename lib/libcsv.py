@@ -195,7 +195,15 @@ class Row(object):
     def as_list(self):
         return self.__values
 
-    def as_list_quoted(self):
+    def as_stripped_list(self):
+        stripped = []
+
+        for v in self.__values:
+            stripped.append(Value(v).stripped())
+
+        return stripped
+
+    def as_quoted_list(self):
         quoted = []
 
         for v in self.__values:
@@ -203,13 +211,13 @@ class Row(object):
 
         return quoted
 
-    def as_list_stripped(self):
-        stripped = []
+    def as_autoquoted_list(self):
+        quoted = []
 
         for v in self.__values:
-            stripped.append(Value(v).stripped())
+            quoted.append(Value(v).autoquoted())
 
-        return stripped
+        return quoted
 
     def as_dict(self):
         mydict = dict()
@@ -275,11 +283,14 @@ class Cell(object):
         self.__colnum = colnum
         self.__value = Value(value)
 
+    def stripped(self):
+        return self.__value.stripped()
+
     def quoted(self):
         return self.__value.quoted()
 
-    def stripped(self):
-        return self.__value.stripped()
+    def autoquoted(self):
+        return self.__value.autoquoted()
 
     def colname(self):
         return self.__colname
@@ -301,24 +312,55 @@ class Cell(object):
 # CSV VALUE
 
 class Value(object):
-    __quoted_field_re = re.compile(r'^"((.|\s)*)"$')
+    __quoted_field_re = re.compile(r'^"((?:[^"]|""|\s)*)"$')
+    __numeric_field_re = re.compile(r'^([-+]?[0-9]+|[-+]?[0-9]*\.[0-9]+|[-+]?Inf|NaN)$')
 
     def __init__(self, raw_value):
         self.__raw = raw_value
         self.__quoted = None
         self.__stripped = None
+        self.__is_quoted_v = None
+        self.__is_numeric_v = None
 
-    def quoted(self):
-        if self.__quoted is None:
-            self.__quoted = ('"%s"' % self.__raw)
+    def __is_quoted(self):
+        if self.__is_quoted_v is None:
+            self.__is_quoted_v = self.__quoted_field_re.match(self.__raw)
 
-        return self.__quoted
+        return self.__is_quoted_v
+
+    def __is_numeric(self):
+        if self.__is_numeric_v is None:
+            self.__is_numeric_v = self.__numeric_field_re.match(self.__raw)
+
+        return self.__is_numeric_v
 
     def stripped(self):
         if self.__stripped is None:
-            self.__stripped = self.__quoted_field_re.sub(r'\1', self.__raw)
+            self.__stripped = self.__raw
+
+            if self.__is_quoted():
+                self.__stripped = self.__quoted_field_re.sub(r'\1', self.__raw)
+                self.__stripped = self.__stripped.replace('""', '"')
 
         return self.__stripped
+
+    def quoted(self):
+        if self.__quoted is None:
+            self.__quoted = self.__raw
+
+            if not self.__is_quoted():
+                self.__quoted = self.__raw.replace('"', '""')
+                self.__quoted = ('"%s"' % self.__quoted)
+
+        return self.__quoted
+
+    def autoquoted(self):
+        if self.__quoted is None:
+            self.__quoted = self.__raw
+
+            if not self.__is_quoted() and not self.__is_numeric:
+                self.__quoted = self.__raw.replace('"', '""')
+                self.__quoted = ('"%s"' % self.__quoted)
 
     def raw(self):
         return self.__raw
