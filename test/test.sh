@@ -36,7 +36,7 @@ function test-script() {
     fi
 
     printf "%-*s" $width "$* ... "
-    if diff "$reference" <("$@") >/dev/null; then
+    if diff "$reference" <("$@" 2>&1) >&/dev/null; then
         result green "PASS"
     else
         result red "FAIL" "$reference"
