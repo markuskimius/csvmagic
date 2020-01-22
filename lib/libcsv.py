@@ -177,8 +177,6 @@ class Reader(object):
 # CSV ROW
 
 class Row(object):
-    __quoted_field_re = re.compile(r'^"((.|\s)*)"$')
-
     def __init__(self, rownum, header, values, delim):
         self.__rownum = rownum
         self.__header = header
@@ -197,11 +195,19 @@ class Row(object):
     def as_list(self):
         return self.__values
 
+    def as_list_quoted(self):
+        quoted = []
+
+        for v in self.__values:
+            quoted.append(Value(v).quoted())
+
+        return quoted
+
     def as_list_stripped(self):
         stripped = []
 
         for v in self.__values:
-            stripped.append(self.__quoted_field_re.sub(r'\1', v))
+            stripped.append(Value(v).stripped())
 
         return stripped
 
@@ -263,16 +269,17 @@ class Row(object):
 # CSV CELL
 
 class Cell(object):
-    __quoted_field_re = re.compile(r'^"((.|\s)*)"$')
-
     def __init__(self, rownum, colname, colnum, value):
         self.__rownum = rownum
         self.__colname = colname
         self.__colnum = colnum
-        self.__value = value
+        self.__value = Value(value)
+
+    def quoted(self):
+        return self.__value.quoted()
 
     def stripped(self):
-        return self.__quoted_field_re.sub(r'\1', self.__value)
+        return self.__value.stripped()
 
     def colname(self):
         return self.__colname
@@ -284,8 +291,38 @@ class Cell(object):
         return self.__rownum
 
     def value(self):
-        return self.__value
+        return self.__value.raw()
 
     def __str__(self):
-        return self.__value
+        return self.__value.raw()
+
+
+##############################################################################
+# CSV VALUE
+
+class Value(object):
+    __quoted_field_re = re.compile(r'^"((.|\s)*)"$')
+
+    def __init__(self, raw_value):
+        self.__raw = raw_value
+        self.__quoted = None
+        self.__stripped = None
+
+    def quoted(self):
+        if self.__quoted is None:
+            self.__quoted = ('"%s"' % self.__raw)
+
+        return self.__quoted
+
+    def stripped(self):
+        if self.__stripped is None:
+            self.__stripped = self.__quoted_field_re.sub(r'\1', self.__raw)
+
+        return self.__stripped
+
+    def raw(self):
+        return self.__raw
+
+    def __str__(self):
+        return self.__raw
 
