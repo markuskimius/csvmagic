@@ -355,12 +355,14 @@ class Value(object):
         return self.__quoted
 
     def autoquoted(self):
-        if self.__quoted is None:
-            self.__quoted = self.__raw
+        value = None
 
-            if not self.__is_quoted() and not self.__is_numeric:
-                self.__quoted = self.__raw.replace('"', '""')
-                self.__quoted = ('"%s"' % self.__quoted)
+        if self.__is_numeric():
+            value = self.stripped()
+        else:
+            value = self.quoted()
+
+        return value
 
     def raw(self):
         return self.__raw

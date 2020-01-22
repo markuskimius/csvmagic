@@ -194,13 +194,13 @@ class Database(object):
                     cols = []
 
                     for j, cell in enumerate(self.__cursor.description):
-                        cols.append(str(cell[0]))
+                        cols.append(libcsv.Value(cell[0]).autoquoted())
 
                     print(','.join(cols))
 
                 # Print row values
                 for j, cell in enumerate(row):
-                    values.append(str(cell))
+                    values.append(libcsv.Value(cell).autoquoted())
 
                 print(','.join(values))
         except sqlite3.OperationalError as e:
