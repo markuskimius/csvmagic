@@ -179,7 +179,7 @@ class Database(object):
             self.create(tablename, row.header().as_list())
             self.__tablenames.append(tablename)
 
-        self.execute('insert into %s values (%s)' % (tablename, qs), *row.as_list())
+        self.execute('insert into %s values (%s)' % (tablename, qs), *row.as_stripped_list())
 
     def create(self, tablenames, fieldnames):
         self.execute('create table %s (%s)' % (tablenames, self.__delim.join(fieldnames)))
