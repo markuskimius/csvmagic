@@ -1,0 +1,223 @@
+#!/bin/sh
+
+##############################################################################
+# convert csv file format from one variant to another variant.
+#
+
+##############################################################################
+# BOOTSTRAP
+#
+# Include ../lib in the search path before calling python.
+# (Thanks to https://unix.stackexchange.com/questions/20880)
+#
+if "true" : '''\'
+then
+    export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+
+    exec python "$0" "$@"
+    exit 127
+fi
+'''
+
+##############################################################################
+# PYTHON CODE BEGINS HERE
+
+import os
+import re
+import sys
+import errno
+import libcsv
+import getopts
+
+__copyright__ = 'Copyright 2020 Mark Kim'
+__license__ = 'Apache 2.0'
+
+
+##############################################################################
+# GLOBALS
+
+SCRIPTNAME = os.path.basename(__file__)
+
+class QUOTING:
+    RAW     = 0
+    AUTO    = 1
+    MINIMAL = 2
+    ALWAYS  = 3
+    STRIP   = 4
+
+class opts:
+    files = []
+    widths = []
+    delim = None
+    outdelim = None
+    quoting = QUOTING.MINIMAL
+
+
+##############################################################################
+# USAGE
+
+def usage():
+    '''\
+Display the csv file(s) with its column aligned.
+
+usage: {SCRIPTNAME} [OPTIONS] [FILES]
+
+  FILE                  Input csv file(s) to read.
+
+Delimiter Control:
+  -d, --delim=DELIM     Use DELIM as the delimiter of input files, where DELIM
+                        may be 'p' for the pipe (|), 't' for the tab (\\t), 'a'
+                        for the SOH (ASCII 1), or other string literal of one
+                        or more characters and Python  string escape sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
+
+  -o, --outdelim=DELIM  Use DELIM as the delimiter of the output.  The default
+                        is to use the same delimiter as the input.
+
+Quoting Control:
+  -a, --autoquote       Quote all non-numeric values.
+  -m, --minquote        Minimally quote all field values. [Default]
+  -q, --quote           Quote all field values.
+  -s, --strip           Strip quotes from all field values.
+  -r, --raw             Preserve the same quoting as the input.
+
+Environment Variables:
+  CSV_DELIMS            A set of characters used to guess the delimiter of a
+                        csv file.  The guesswork happens when reading the first
+                        line of the first FILE, by testing each character
+                        present in CSV_DELIMS for the character with the most
+                        occurrence in the line.  If any of the characters occur
+                        the same number of times (including zero), the earlier
+                        character in the variable is chosen.  If the
+                        environment variable is not set, it defaults to
+                        '{libcsv.DELIMS}'.  CSV_DELIMS may include escape
+                        characters.
+
+'''
+
+    print(usage.__doc__.format(**globals()))
+
+
+##############################################################################
+# MAIN
+
+def main():
+    errcount = 0
+
+    getopt = getopts.getopts(sys.argv, {
+        'd' : 1,           'delim'      : 1,
+        'o' : 1,           'outdelim'   : 1,
+        'a' : 0,           'autoquote'  : 0,
+        'm' : 0,           'minquote'   : 0,
+        'q' : 0,           'quote'      : 0,
+        's' : 0,           'strip'      : 0,
+        'h' : 0,           'help'       : 0,
+    })
+
+    for c in getopt:
+        if c in ('-')                   : opts.files.append(getopt.optarg)
+        elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('o', 'outdelim')     : opts.outdelim = arg_to_delim(getopt.optarg)
+        elif c in ('a', 'autoquote')    : opts.quoting = QUOTING.AUTO
+        elif c in ('m', 'minquote')     : opts.quoting = QUOTING.MINIMAL
+        elif c in ('q', 'quote')        : opts.quoting = QUOTING.ALWAYS
+        elif c in ('s', 'strip')        : opts.quoting = QUOTING.STRIP
+        elif c in ('r', 'raw')          : opts.quoting = QUOTING.RAW
+        elif c in ('h', 'help')         : usage(); sys.exit(0)
+        else                            : errcount += 1
+
+    # Sanity check
+    if errcount:
+        sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
+        sys.exit(1)
+
+    # Read from STDIN if no file specified
+    if not opts.files:
+        opts.files.append("-")
+
+    # Read each file
+    for f in opts.files:
+        with smart_open(f) as fo:
+            csvcsv(fo)
+
+
+def is_intarray(arg):
+    isok = True
+
+    for v in arg.split(','):
+        try:
+            int(v)
+        except ValueError as e:
+            isok = False
+            break
+
+    return isok
+
+
+def arg_to_delim(delim):
+    # Delimiter shorthands
+    if delim in ('p'): delim = '|'
+    elif delim in ('t'): delim = '\t'
+    elif delim in ('a'): delim = '\u0001'
+
+    # Translate escape characters
+    delim = delim.encode().decode('unicode_escape')
+
+    return delim
+
+
+def smart_open(filename, mode='r'):
+    '''Open a file for reading, treating '-' as a stdin or stdout, depending on
+    the mode.'''
+
+    if filename == '-':
+        # Duplicate stdin/stdout so the caller can close it without closing stdin.
+        fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
+        fo = os.fdopen(os.dup(fd))
+    else:
+        fo = open(filename, mode)
+
+    return fo
+
+
+def csvcsv(file):
+    reader = libcsv.Reader(file, delim=opts.delim, has_header=False, is_multitable=False)
+    outdelim = opts.outdelim
+
+    for row in reader:
+        if outdelim is None: outdelim = row.delim()
+
+        for i, cell in enumerate(row):
+            if i > 0:
+                sys.stdout.write(outdelim)
+
+            if opts.quoting == QUOTING.RAW:
+                value = cell.value()
+            elif opts.quoting == QUOTING.AUTO:
+                value = cell.autoquoted()
+            elif opts.quoting == QUOTING.MINIMAL:
+                value = cell.minquoted(outdelim)
+            elif opts.quoting == QUOTING.ALWAYS:
+                value = cell.quoted()
+            elif opts.quoting == QUOTING.STRIP:
+                value = cell.stripped()
+
+            sys.stdout.write(value)
+
+        sys.stdout.write('\n')
+
+
+##############################################################################
+# ENTRY POINT
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit(errno.EOWNERDEAD)
+
+
+# vim:ft=python
