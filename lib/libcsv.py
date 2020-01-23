@@ -379,7 +379,7 @@ class Value(object):
     def minquoted(self, delim):
         value = self.stripped()
 
-        if '"' in value or delim in value:
+        if '"' in value or delim in value or '\n' in value:
             value = self.quoted()
 
         return value
