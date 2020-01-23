@@ -219,6 +219,15 @@ class Row(object):
 
         return quoted
 
+    def as_minquoted_list(self, delim=None):
+        delim = self.__delim
+        quoted = []
+
+        for v in self.__values:
+            quoted.append(Value(v).minquoted(delim))
+
+        return quoted
+
     def as_dict(self):
         mydict = dict()
         values = self.__values
@@ -292,6 +301,9 @@ class Cell(object):
     def autoquoted(self):
         return self.__value.autoquoted()
 
+    def minquoted(self, delim):
+        return self.__value.minquoted(delim)
+
     def colname(self):
         return self.__colname
 
@@ -360,6 +372,14 @@ class Value(object):
         if self.__is_numeric():
             value = self.stripped()
         else:
+            value = self.quoted()
+
+        return value
+
+    def minquoted(self, delim):
+        value = self.stripped()
+
+        if '"' in value or delim in value:
             value = self.quoted()
 
         return value

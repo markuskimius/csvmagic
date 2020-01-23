@@ -154,10 +154,11 @@ def smart_open(filename, mode='r'):
 
 
 class Database(object):
-    def __init__(self):
+    def __init__(self, delim=','):
         self.__conn = sqlite3.connect('')
         self.__cursor = self.__conn.cursor()
         self.__tablenames = []
+        self.__delim = delim
 
     def load(self, filename, tablename=None, delim=None):
         if tablename is None:
@@ -172,7 +173,7 @@ class Database(object):
                     self.insert(tablename, row)
 
     def insert(self, tablename, row):
-        qs = ','.join(['?'] * len(row))
+        qs = self.__delim.join(['?'] * len(row))
 
         if tablename not in self.__tablenames:
             self.create(tablename, row.header().as_list())
@@ -181,9 +182,11 @@ class Database(object):
         self.execute('insert into %s values (%s)' % (tablename, qs), *row.as_list())
 
     def create(self, tablenames, fieldnames):
-        self.execute('create table %s (%s)' % (tablenames, ','.join(fieldnames)))
+        self.execute('create table %s (%s)' % (tablenames, self.__delim.join(fieldnames)))
 
     def execute(self, command, *args):
+        delim = self.__delim
+
         try:
             # Execute the command and print any rows it returns
             for i, row in enumerate(self.__cursor.execute(command, args)):
@@ -194,15 +197,15 @@ class Database(object):
                     cols = []
 
                     for j, cell in enumerate(self.__cursor.description):
-                        cols.append(libcsv.Value(cell[0]).autoquoted())
+                        cols.append(libcsv.Value(cell[0]).minquoted(delim))
 
-                    print(','.join(cols))
+                    print(delim.join(cols))
 
                 # Print row values
                 for j, cell in enumerate(row):
-                    values.append(libcsv.Value(cell).autoquoted())
+                    values.append(libcsv.Value(cell).minquoted(delim))
 
-                print(','.join(values))
+                print(delim.join(values))
         except sqlite3.OperationalError as e:
             sys.stderr.write('%s -- %s\n' % (command, str(e)))
 
