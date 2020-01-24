@@ -29,6 +29,7 @@ import errno
 import libcsv
 import getopts
 import sqlite3
+import readline
 
 __copyright__ = 'Copyright 2020 Mark Kim'
 __license__ = 'Apache 2.0'
@@ -121,8 +122,7 @@ def main():
 
     # Execute SQL commands
     if opts.command is None:
-        # TODO
-        print('no command')
+        CsvSql(db).run()
     else:
         db.execute(opts.command)
 
@@ -208,6 +208,30 @@ class Database(object):
                 print(delim.join(values))
         except sqlite3.OperationalError as e:
             sys.stderr.write('%s -- %s\n' % (command, str(e)))
+
+
+class CsvSql(object):
+    __PROMPT = 'csvsql> '
+
+    def __init__(self, database):
+        self.__db = database
+
+    def run(self):
+        while True:
+            try:
+                line = raw_input(self.__PROMPT).strip()
+                parts = line.split()
+                command = parts[0]
+                args = parts[1:]
+            except EOFError:
+                break
+
+            if command == 'exit':
+                break
+            else:
+                self.__db.execute(line)
+
+        print('')
 
 
 ##############################################################################
