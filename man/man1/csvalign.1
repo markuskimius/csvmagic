@@ -32,6 +32,14 @@ manually specified using this option.
 the width that is left aligned.  A positive intger is the width that is right
 aligned.  The last integer in the list is the default width of columns after
 the columns with the width specified.
+.TP
+\fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
+Use \fIDELIM\fP as the value delimiter, where \fIDELIM\fP may be '\fBp\fP' for
+the pipe (\fB|\fP), '\fBt\fP' for the tab (\fB\\t\fP), '\fBa\fP' for the SOH
+(ASCII 1), or other string literal of one or more characters and Python string
+escape sequences.  \fIDELIM\fP may include escape characters.  By default the
+delimiter is guessed from the characters in the \fBCSV_DELIMS\fP environment
+variable.
 .SS Environment Variables
 .TP
 \fBCSV_DELIMS\fP
@@ -43,4 +51,4 @@ times (including zero), the earlier character in the variable is chosen.
 If the environment variable is not set, it defaults to ',\\t|\\u0001'.
 \fBCSV_DELIMS\fP may include escape characters.
 .SH "SEE ALSO"
-csvread(1), csvcut(1)
+csvread(1), csvcut(1), csvsql(1), csvcsv(1)
