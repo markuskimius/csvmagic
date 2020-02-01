@@ -206,7 +206,12 @@ class Database(object):
 
                 # Print row values
                 for j, cell in enumerate(row):
-                    values.append(libcsv.Value(cell).strquoted(delim))
+                    v = libcsv.Value(cell).strquoted(delim)
+
+                    if v == '':
+                        v = 'NULL'
+
+                    values.append(v)
 
                 print(delim.join(values))
                 count += 1
