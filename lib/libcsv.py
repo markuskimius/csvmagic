@@ -135,11 +135,12 @@ class Reader(object):
         else:
             self.__setdelim(best_delim)
 
-    def __setdelim(self, delim):
-        unquoted_field_r = r'[^%s"]*' % delim
+    def __setdelim(self, delim, is_regex=False):
+        delim_re = delim if is_regex else re.escape(delim)
+        unquoted_field_r = r'(?:(?!(?:%s)|").)*' % delim_re
         quoted_field_r = r'"(?:[^"]|"")*"'
         field_r = r'(?:%s)|(?:%s)' % (unquoted_field_r, quoted_field_r)
-        row_r = r'(?:%s)(?:%s(?:%s))*' % (field_r, re.escape(delim), field_r)
+        row_r = r'(?:%s)(?:(?:%s)(?:%s))*' % (field_r, delim_re, field_r)
         row_re = re.compile(r'^(%s)$' % row_r)
         field_re = re.compile(r'^(%s)$' % field_r)
 
