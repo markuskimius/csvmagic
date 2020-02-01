@@ -329,6 +329,7 @@ class Value(object):
 
     def __init__(self, raw_value):
         self.__raw = raw_value
+        self.__rawstr = str(raw_value)
         self.__quoted = None
         self.__stripped = None
         self.__is_quoted_v = None
@@ -336,32 +337,32 @@ class Value(object):
 
     def __is_quoted(self):
         if self.__is_quoted_v is None:
-            self.__is_quoted_v = self.__quoted_field_re.match(self.__raw)
+            self.__is_quoted_v = self.__quoted_field_re.match(self.__rawstr)
 
         return self.__is_quoted_v
 
     def __is_numeric(self):
         if self.__is_numeric_v is None:
-            self.__is_numeric_v = self.__numeric_field_re.match(self.__raw)
+            self.__is_numeric_v = self.__numeric_field_re.match(self.__rawstr)
 
         return self.__is_numeric_v
 
     def stripped(self):
         if self.__stripped is None:
-            self.__stripped = self.__raw
+            self.__stripped = self.__rawstr
 
             if self.__is_quoted():
-                self.__stripped = self.__quoted_field_re.sub(r'\1', self.__raw)
+                self.__stripped = self.__quoted_field_re.sub(r'\1', self.__rawstr)
                 self.__stripped = self.__stripped.replace('""', '"')
 
         return self.__stripped
 
     def quoted(self):
         if self.__quoted is None:
-            self.__quoted = self.__raw
+            self.__quoted = self.__rawstr
 
             if not self.__is_quoted():
-                self.__quoted = self.__raw.replace('"', '""')
+                self.__quoted = self.__rawstr.replace('"', '""')
                 self.__quoted = ('"%s"' % self.__quoted)
 
         return self.__quoted
@@ -388,5 +389,5 @@ class Value(object):
         return self.__raw
 
     def __str__(self):
-        return self.__raw
+        return self.__rawstr
 
