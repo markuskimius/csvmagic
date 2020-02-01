@@ -56,7 +56,7 @@ SQL query csv file(s).
 usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
 Options:
-  FILE                  csv file(s) to align.
+  FILE                  csv file(s) to query.
 
   -c, --command=SQL     SQL commands to execute.
 

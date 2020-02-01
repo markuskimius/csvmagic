@@ -1,30 +1,18 @@
-.TH CSVCSV 1 "30 January 2020"
+.TH CSVSQL 1 "1 February 2020"
 .SH NAME
-csvcsv \- convert a csv file from one variant to another
+csvsql \- query one or more csv files
 .SH SYNOPSIS
-\fBcsvcsv\fP [\-h] [\-a] [\-m] [\-q] [\-s] [\-r] [\-d \fIDELIM\fP] [\-o \fIDELIM\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvsql\fP [\-h] [\-c \fISQL\fP] [\-d \fIDELIM\fP] [\fIFILE\fP [\fIFILE\fP ...]]
 .SH DESCRIPTION
-\fBcsvcsv\fP converts a comma\-separated value (csv) file \fIFILE\fP from one
-variant to another.
+\fBcsvsql\fP load one or more csv files \fIFILE\fP into memory as database
+tables that can be queried or manipulated using \fISQL\fP.
 .SS Options
 .TP
 \fB-h\fP, \fB--help\fP
 Output a usage message and exit.
 .TP
-\fB-a\fP, \fB--autoquote\fP
-Quote all non-numeric values.
-.TP
-\fB-m\fP, \fB--minquote\fP
-Minimally quote all field values. This is the default.
-.TP
-\fB-q\fP, \fB--quote\fP
-Quote all field values.
-.TP
-\fB-s\fP, \fB--strip\fP
-Strip quotes from all field values.
-.TP
-\fB-r\fP, \fB--raw\fP
-Preserve the same quoting as the input.
+\fB-c\fP \fISQL\fP, \fB--command\fP=\fISQL\fP
+\fISQL\fP command(s) to execute.
 .TP
 \fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
 Use \fIDELIM\fP as the value delimiter of input FILEs, where \fIDELIM\fP may be
@@ -33,10 +21,6 @@ for the SOH (ASCII 1), or other string literal of one or more characters and
 Python string escape sequences.  \fIDELIM\fP may include escape characters.  By
 default the delimiter is guessed from the characters in the \fBCSV_DELIMS\fP
 environment variable.
-.TP
-\fB-o\fP \fIDELIM\fP, \fB--outdelim\fP=\fIDELIM\fP
-Use DELIM as the delimiter of the output.  The default is to use the same
-delimiter as the input.
 .SS Environment Variables
 .TP
 \fBCSV_DELIMS\fP
@@ -48,4 +32,4 @@ times (including zero), the earlier character in the variable is chosen.
 If the environment variable is not set, it defaults to ',\\t|\\u0001'.
 \fBCSV_DELIMS\fP may include escape characters.
 .SH "SEE ALSO"
-csvread(1), csvcut(1), csvalign(1), csvsql(1)
+csvread(1), csvcut(1), csvalign(1), csvcsv(1)
