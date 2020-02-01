@@ -43,7 +43,7 @@ SCRIPTNAME = os.path.basename(__file__)
 class opts:
     files = []
     delim = None
-    command = None
+    commands = []
 
 
 ##############################################################################
@@ -58,7 +58,8 @@ usage: {SCRIPTNAME} [OPTIONS] [FILES]
 Options:
   FILE                  csv file(s) to query.
 
-  -c, --command=SQL     SQL commands to execute.
+  -c, --command=SQL     SQL commands to execute.  May be specified multiple
+                        times, once per SQL command.
 
   -d, --delim=DELIM     Use DELIM as the value delimiter, where DELIM may be
                         'p' for the pipe (|), 't' for the tab (\\t), 'a' for
@@ -99,7 +100,7 @@ def main():
 
     for c in getopt:
         if c in ('-')                   : opts.files.append(getopt.optarg)
-        elif c in ('c', 'command')      : opts.command = getopt.optarg
+        elif c in ('c', 'command')      : opts.commands.append(getopt.optarg)
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
@@ -121,10 +122,11 @@ def main():
         db.load(f)
 
     # Execute SQL commands
-    if opts.command is None:
+    if not opts.commands:
         CsvSql(db).run()
-    else:
-        db.execute(opts.command)
+
+    for c in opts.commands:
+        db.execute(c)
 
 
 def arg_to_delim(delim):
@@ -186,6 +188,7 @@ class Database(object):
 
     def execute(self, command, *args):
         delim = self.__delim
+        count = 0
 
         try:
             # Execute the command and print any rows it returns
@@ -206,6 +209,11 @@ class Database(object):
                     values.append(libcsv.Value(cell).minquoted(delim))
 
                 print(delim.join(values))
+                count += 1
+
+            # Empty line after each command that printed something
+            if count:
+                print('')
         except sqlite3.OperationalError as e:
             sys.stderr.write('%s -- %s\n' % (command, str(e)))
 
