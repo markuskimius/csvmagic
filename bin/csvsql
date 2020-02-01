@@ -206,7 +206,7 @@ class Database(object):
 
                 # Print row values
                 for j, cell in enumerate(row):
-                    values.append(libcsv.Value(cell).minquoted(delim))
+                    values.append(libcsv.Value(cell).strquoted(delim))
 
                 print(delim.join(values))
                 count += 1
@@ -215,7 +215,7 @@ class Database(object):
             if count:
                 print('')
         except sqlite3.OperationalError as e:
-            sys.stderr.write('%s -- %s\n' % (command, str(e)))
+            sys.stderr.write('%s -- %s\n\n' % (command, str(e)))
 
 
 class CsvSql(object):

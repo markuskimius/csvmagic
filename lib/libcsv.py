@@ -228,6 +228,15 @@ class Row(object):
 
         return quoted
 
+    def as_strquoted_list(self, delim=None):
+        delim = self.__delim
+        quoted = []
+
+        for v in self.__values:
+            quoted.append(Value(v).strquoted(delim))
+
+        return quoted
+
     def as_dict(self):
         mydict = dict()
         values = self.__values
@@ -304,6 +313,9 @@ class Cell(object):
     def minquoted(self, delim):
         return self.__value.minquoted(delim)
 
+    def strquoted(self, delim):
+        return self.__value.strquoted(delim)
+
     def colname(self):
         return self.__colname
 
@@ -335,6 +347,9 @@ class Value(object):
         self.__is_quoted_v = None
         self.__is_numeric_v = None
 
+        if raw_value is None:
+            self.__rawstr = ''
+
     def __is_quoted(self):
         if self.__is_quoted_v is None:
             self.__is_quoted_v = self.__quoted_field_re.match(self.__rawstr)
@@ -361,7 +376,7 @@ class Value(object):
         if self.__quoted is None:
             self.__quoted = self.__rawstr
 
-            if not self.__is_quoted():
+            if not self.__is_quoted() and self.__raw is not None:
                 self.__quoted = self.__rawstr.replace('"', '""')
                 self.__quoted = ('"%s"' % self.__quoted)
 
@@ -381,6 +396,14 @@ class Value(object):
         value = self.stripped()
 
         if '"' in value or delim in value or '\n' in value:
+            value = self.quoted()
+
+        return value
+
+    def strquoted(self, delim):
+        value = self.__rawstr
+
+        if isinstance(self.__raw, unicode) or isinstance(self.__raw, str):
             value = self.quoted()
 
         return value
