@@ -406,7 +406,7 @@ class Value(object):
     def strquoted(self, delim):
         value = self.__rawstr
 
-        if isinstance(self.__raw, unicode) or isinstance(self.__raw, str):
+        if isinstance(self.__raw, str):
             value = self.quoted()
 
         return value
