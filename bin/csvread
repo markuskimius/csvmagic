@@ -14,12 +14,17 @@ if "true" : '''\'
 then
     export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
     export PYTHONPATH="$(dirname $0)/../plugins:$PYTHONPATH"
+    pythoncmd=python
 
     if [ -n "$CSV_PLUGINS_PATH" ]; then
         export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
     fi
 
-    exec python "$0" "$@"
+    if command -v python3 >/dev/null; then
+        pythoncmd=python3
+    fi
+
+    exec "$pythoncmd" "$0" "$@"
     exit 127
 fi
 '''
