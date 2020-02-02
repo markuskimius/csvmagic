@@ -157,7 +157,11 @@ def arg_to_delim(delim):
     elif delim in ('a'): delim = '\u0001'
 
     # Translate escape characters
-    delim = delim.encode().decode('unicode_escape')
+    decoded = delim.encode().decode('unicode_escape')
+
+    # Use the decoded string only if it's a single character
+    if len(delim) == 1 or len(decoded) == 1:
+        delim = decoded
 
     return delim
 

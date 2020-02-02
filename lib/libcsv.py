@@ -39,8 +39,9 @@ class Reader(object):
             self.__delim = None
             self.__row_re = None
             self.__field_re = None
+            self.__delim_re = None
         else:
-            self.__setdelim(self.__init_delim)
+            self.__setdelim(self.__init_delim, len(self.__init_delim) > 1)
 
         if self.__has_header:
             self.__readrow()
@@ -147,12 +148,13 @@ class Reader(object):
         self.__delim = delim
         self.__row_re = row_re
         self.__field_re = field_re
+        self.__delim_re = re.compile(delim_re)
 
     def __is_validrow(self, buf):
         return self.__row_re.match(buf)
 
     def __split(self, buf):
-        rawfields = buf.split(self.__delim)
+        rawfields = self.__delim_re.split(buf)
         fields = []
         last = ''
 
