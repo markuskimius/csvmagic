@@ -13,8 +13,13 @@
 if "true" : '''\'
 then
     export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+    pythoncmd=python
 
-    exec python "$0" "$@"
+    if command -v python3 >/dev/null; then
+        pythoncmd=python3
+    fi
+
+    exec "$pythoncmd" "$0" "$@"
     exit 127
 fi
 '''
@@ -26,6 +31,7 @@ import os
 import re
 import sys
 import errno
+import shlex
 import libcsv
 import getopts
 import sqlite3
@@ -110,23 +116,20 @@ def main():
         sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
         sys.exit(1)
 
-    # Read from STDIN if no file specified
-    if not opts.files:
-        opts.files.append("-")
-
     # Instantiate the database
     db = Database()
 
     # Load all tables
     for f in opts.files:
-        db.load(f)
+        db.read(f)
 
     # Execute SQL commands
-    if not opts.commands:
-        CsvSql(db).run()
-
     for c in opts.commands:
         db.execute(c)
+
+    # If no commands were specified, launch the CLI
+    if not opts.commands:
+        CommandLineInterface(db).mainloop()
 
 
 def arg_to_delim(delim):
@@ -166,7 +169,7 @@ class Database(object):
         self.__tablenames = []
         self.__delim = delim
 
-    def load(self, filename, tablename=None, delim=None):
+    def read(self, filename, tablename=None, delim=None):
         if tablename is None:
             tablename = os.path.basename(filename)
             tablename = os.path.splitext(tablename)[0]
@@ -180,15 +183,36 @@ class Database(object):
 
     def insert(self, tablename, row):
         qs = self.__delim.join(['?'] * len(row))
+        insert_count = 0
 
         if tablename not in self.__tablenames:
             self.create(tablename, row.header().as_list())
             self.__tablenames.append(tablename)
 
-        self.execute('insert into %s values (%s)' % (tablename, qs), *row.as_stripped_list())
+        query_result = self.query('insert into %s values (%s)' % (tablename, qs), *row.as_stripped_list())
+
+        if query_result:
+            insert_count = query_result.rowcount
+
+        return insert_count
 
     def create(self, tablenames, fieldnames):
-        self.execute('create table %s (%s)' % (tablenames, self.__delim.join(fieldnames)))
+        is_created = False
+
+        if self.query('create table %s (%s)' % (tablenames, self.__delim.join(fieldnames))):
+            is_created = True
+
+        return is_created
+
+    def query(self, command, *args):
+        result = []
+
+        try:
+            result = self.__cursor.execute(command, args)
+        except sqlite3.OperationalError as e:
+            sys.stderr.write('%s -- %s\n\n' % (command, str(e)))
+
+        return result
 
     def execute(self, command, *args):
         delim = self.__delim
@@ -196,7 +220,7 @@ class Database(object):
 
         try:
             # Execute the command and print any rows it returns
-            for i, row in enumerate(self.__cursor.execute(command, args)):
+            for i, row in enumerate(self.query(command, *args)):
                 values = []
 
                 # Print column names
@@ -227,28 +251,137 @@ class Database(object):
             sys.stderr.write('%s -- %s\n\n' % (command, str(e)))
 
 
-class CsvSql(object):
+class CommandLineInterface(object):
     __PROMPT = 'csvsql> '
+    __commands = {
+        'echo': {
+            'args': '[ARGS]',
+            'desc': 'Print ARGS to stdout.',
+        },
+
+        'read': {
+            'args': 'FILE [--as=TABLE] [--delim=DELIM]',
+            'desc': 'Read FILE into TABLE.  If omitted TABLE is the filename without the extension.',
+        },
+
+        'showtables': {
+            'desc': 'Print the list of tables.',
+        },
+
+        'help': {
+            'desc': 'Show the list of commands.',
+        },
+    }
 
     def __init__(self, database):
         self.__db = database
 
-    def run(self):
+    def mainloop(self):
         while True:
             try:
-                line = raw_input(self.__PROMPT).strip()
-                parts = line.split()
-                command = parts[0]
-                args = parts[1:]
-            except EOFError:
+                line = input(self.__PROMPT)
+
+                while True:
+                    if line.endswith('\\'):
+                        line = line[:-1]
+                    else:
+                        try:
+                            parts = shlex.shlex(line, posix=True)
+                            parts = list(parts)
+                            command = parts[0] if parts else None
+                            args = parts[1:] if len(parts) > 1 else []
+                            break
+
+                        except ValueError:
+                            line += '\n'
+                            pass
+
+                    line += input()
+
+                self.__execute(command, args) or self.__db.execute(line)
+
+            except EOFError as e:
+                print(str(e))
                 break
 
-            if command == 'exit':
-                break
-            else:
-                self.__db.execute(line)
+    def __execute(self, command, args):
+        command = command and command.lower()
+        executed = True
+
+        if command is None             : pass
+        elif command in ('echo')       : print(args)
+        elif command in ('exit')       : raise EOFError()
+        elif command in ('help')       : self.__exec_help(args)
+        elif command in ('read')       : self.__exec_read(args)
+        elif command in ('showtables') : self.__exec_showtables(args)
+        else                           : executed = False
+
+        return executed
+
+    def __exec_help(self, args):
+        commands = self.__commands
 
         print('')
+
+        for cmd in args or sorted(commands.keys()):
+            SYNTAX_WIDTH = 14
+
+            if cmd in commands:
+                command = commands[cmd]
+                help_args = command['args'] if 'args' in command else ''
+                help_desc = command['desc']
+                syntax = '%s %s' % (cmd, help_args)
+
+                if len(syntax) <= SYNTAX_WIDTH:
+                    print('    %-*s %s' % (SYNTAX_WIDTH, syntax, help_desc))
+                else:
+                    print('    %-*s' % (SYNTAX_WIDTH, syntax))
+                    print('    %-*s %s' % (SYNTAX_WIDTH, '', help_desc))
+
+            else:
+                print('No help for: %s' % cmd)
+
+        print('')
+
+    def __exec_read(self, args):
+        filenames = []
+        tablenames = []
+        delim = None
+        exitcode = 0
+
+        getopt = getopts.getopts(args, {
+            'a' : 1, 'as'    : 1,
+            'd' : 1, 'delim' : 1,
+        })
+
+        for c in getopt:
+            if c in ('-')            : filename.append(getopt.optarg)
+            elif c in ('a', 'as')    : tablename.append(getopt.optarg)
+            elif c in ('d', 'delim') : delim = getopt.optarg
+            else                     : exitcode = 1
+
+            while len(tablenames) < len(filenames)-1:
+                tablenames.append(None)
+
+            while len(filenames) < len(tablenames)-1:
+                filenames.append(None)
+
+        while len(filenames) < len(tablenames):
+            filenames.append(None)
+
+        while len(tablenames) < len(filenames):
+            tablenames.append(None)
+
+        if exitcode == 0:
+            for i, file in enumerate(filenames):
+                table = tablenames[i]
+
+                self.__db.read(file, table, delim)
+
+        return exitcode
+
+    def __exec_showtables(self, args):
+        self.__db.execute("select name from sqlite_master where type='table'")
 
 
 ##############################################################################
