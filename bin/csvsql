@@ -36,6 +36,7 @@ import libcsv
 import getopts
 import sqlite3
 import readline
+import subprocess
 
 __copyright__ = 'Copyright 2020 Mark Kim'
 __license__ = 'Apache 2.0'
@@ -205,7 +206,7 @@ class Database(object):
         return is_created
 
     def query(self, command, *args):
-        result = []
+        result = None
 
         try:
             result = self.__cursor.execute(command, args)
@@ -268,6 +269,11 @@ class CommandLineInterface(object):
             'desc': 'Print the list of tables.',
         },
 
+        '!': {
+            'args': 'COMMAND [ARGS]',
+            'desc': 'Execute the program COMMAND and pass ARGS.',
+        },
+
         'help': {
             'desc': 'Show the list of commands.',
         },
@@ -314,6 +320,7 @@ class CommandLineInterface(object):
         elif command in ('help')       : self.__exec_help(args)
         elif command in ('read')       : self.__exec_read(args)
         elif command in ('showtables') : self.__exec_showtables(args)
+        elif command in ('!')          : self.__exec_ext(args)
         else                           : executed = False
 
         return executed
@@ -324,7 +331,7 @@ class CommandLineInterface(object):
         print('')
 
         for cmd in args or sorted(commands.keys()):
-            SYNTAX_WIDTH = 14
+            SYNTAX_WIDTH = 17
 
             if cmd in commands:
                 command = commands[cmd]
@@ -349,13 +356,13 @@ class CommandLineInterface(object):
         delim = None
         exitcode = 0
 
-        getopt = getopts.getopts(args, {
+        getopt = getopts.getopts(['read'] + args, {
             'a' : 1, 'as'    : 1,
             'd' : 1, 'delim' : 1,
         })
 
         for c in getopt:
-            if c in ('-')            : filename.append(getopt.optarg)
+            if c in ('-')            : print(getopt.optarg);  filenames.append(getopt.optarg)
             elif c in ('a', 'as')    : tablename.append(getopt.optarg)
             elif c in ('d', 'delim') : delim = getopt.optarg
             else                     : exitcode = 1
@@ -373,15 +380,28 @@ class CommandLineInterface(object):
             tablenames.append(None)
 
         if exitcode == 0:
-            for i, file in enumerate(filenames):
-                table = tablenames[i]
+            for i, f in enumerate(filenames):
+                t = tablenames[i]
 
-                self.__db.read(file, table, delim)
+                print(i, f, t)
+
+                self.__db.read(f, t, delim)
 
         return exitcode
 
     def __exec_showtables(self, args):
         self.__db.execute("select name from sqlite_master where type='table'")
+
+    def __exec_ext(self, args):
+        try:
+            process = subprocess.Popen(args)
+            process.wait()
+        except IndexError as e:
+            print('Must specify a command')
+        except FileNotFoundError as e:
+            print(str(e))
+
+        print()
 
 
 ##############################################################################
