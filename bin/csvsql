@@ -362,7 +362,7 @@ class CommandLineInterface(object):
         })
 
         for c in getopt:
-            if c in ('-')            : print(getopt.optarg);  filenames.append(getopt.optarg)
+            if c in ('-')            : filenames.append(getopt.optarg)
             elif c in ('a', 'as')    : tablename.append(getopt.optarg)
             elif c in ('d', 'delim') : delim = getopt.optarg
             else                     : exitcode = 1
