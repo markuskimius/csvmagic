@@ -166,7 +166,6 @@ def smart_open(filename, mode='r'):
 class Database(object):
     def __init__(self, delim=','):
         self.__conn = sqlite3.connect('')
-        self.__cursor = self.__conn.cursor()
         self.__tablenames = []
         self.__delim = delim
 
@@ -209,7 +208,7 @@ class Database(object):
         result = None
 
         try:
-            result = self.__cursor.execute(command, args)
+            result = self.__conn.cursor().execute(command, args)
         except sqlite3.OperationalError as e:
             sys.stderr.write('%s -- %s\n\n' % (command, str(e)))
 
@@ -220,15 +219,17 @@ class Database(object):
         count = 0
 
         try:
+            cursor = self.query(command, *args)
+
             # Execute the command and print any rows it returns
-            for i, row in enumerate(self.query(command, *args)):
+            for i, row in enumerate(cursor):
                 values = []
 
                 # Print column names
                 if i == 0:
                     cols = []
 
-                    for j, cell in enumerate(self.__cursor.description):
+                    for j, cell in enumerate(cursor.description):
                         cols.append(libcsv.Value(cell[0]).minquoted(delim))
 
                     print(delim.join(cols))
@@ -292,7 +293,7 @@ class CommandLineInterface(object):
                         line = line[:-1]
                     else:
                         try:
-                            parts = shlex.shlex(line, posix=True)
+                            parts = shlex.shlex(line, posix=True, punctuation_chars=True)
                             parts = list(parts)
                             command = parts[0] if parts else None
                             args = parts[1:] if len(parts) > 1 else []
@@ -390,7 +391,28 @@ class CommandLineInterface(object):
         return exitcode
 
     def __exec_showtables(self, args):
-        self.__db.execute("select name from sqlite_master where type='table'")
+        tablelist = {}
+        widths = [0, 0]
+
+        for trow in self.__db.query("select name from sqlite_master where type='table'"):
+            table = trow[0]
+
+            for crow in self.__db.query("select count(*) from %s" % table):
+                count = crow[0]
+
+            widths[0] = max(widths[0], len(table))
+            widths[1] = max(widths[1], len(str(count)))
+
+            tablelist[table] = {
+                'count': count,
+            }
+
+        for table in sorted(tablelist.keys()):
+            count = tablelist[table]['count']
+
+            print("%-*s  %-*s records" % (widths[0], table, widths[1], count))
+
+        print('')
 
     def __exec_ext(self, args):
         try:
