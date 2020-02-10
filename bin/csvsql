@@ -150,11 +150,21 @@ def arg_to_delim(delim):
 
 
 class CLI(object):
-    __PROMPT = 'csvsql> '
-
     def __init__(self, database):
         self.__db = database
+        self.__rec = Record(database)
         self.__commands = {
+            '!': {
+                'args': 'COMMAND [ARGS]',
+                'desc': 'Execute the program COMMAND and pass ARGS.',
+                'exec': self.__cmd_exec,
+            },
+
+            'exit': {
+                'desc': 'Exit csvsql.',
+                'exec': self.__cmd_exit,
+            },
+
             'echo': {
                 'args': '[ARGS]',
                 'desc': 'Print ARGS to stdout.',
@@ -172,10 +182,30 @@ class CLI(object):
                 'exec': self.__cmd_showtables,
             },
 
-            '!': {
-                'args': 'COMMAND [ARGS]',
-                'desc': 'Execute the program COMMAND and pass ARGS.',
-                'exec': self.__cmd_exec,
+            'use': {
+                'args': 'TABLE',
+                'desc': 'Use TABLE as the default table.',
+                'exec': self.__cmd_use,
+            },
+
+            'next': {
+                'desc': 'Move to the next record.',
+                'exec': self.__cmd_next,
+            },
+
+            'prev': {
+                'desc': 'Move to the previous record.',
+                'exec': self.__cmd_prev,
+            },
+
+            'show': {
+                'desc': 'Show the current record.',
+                'exec': self.__cmd_show,
+            },
+
+            'showindexes': {
+                'desc': 'Print the list of keys for the default table.',
+                'exec': self.__cmd_showindexes,
             },
 
             'help': {
@@ -198,11 +228,15 @@ class CLI(object):
                 pass
 
     def __getcommand(self):
-        prompt = self.__PROMPT
+        table = self.__rec.get_table()
+        recnum = self.__rec.get_recnum()
+        prompt = 'csvsql' if table is None else '%s.%d' % (table, recnum)
+        plen = len(prompt)
         line = ''
 
         while True:
-            line += input(self.__PROMPT)
+            line += input('%*s> ' % (plen, prompt))
+            prompt = '... '
 
             # Test for the line continuation character
             if line.endswith('\\'):
@@ -235,11 +269,95 @@ class CLI(object):
         else:
             self.__db.execute(line)
 
+    def __cmd_exit(self, args):
+        raise EOFError()
+
     def __cmd_echo(self, args):
         print(args)
 
-    def __cmd_exit(self, args):
-        raise EOFError()
+    def __cmd_load(self, args):
+        filenames = []
+        tablenames = []
+        delim = None
+        exitcode = 0
+
+        getopt = getopts.getopts(['read'] + args, {
+            'a' : 1, 'as'    : 1,
+            'd' : 1, 'delim' : 1,
+        })
+
+        for c in getopt:
+            if c in ('-')            : filenames.append(getopt.optarg)
+            elif c in ('a', 'as')    : tablenames.append(getopt.optarg)
+            elif c in ('d', 'delim') : delim = getopt.optarg
+            else                     : exitcode = 1
+
+            while len(tablenames) < len(filenames)-1:
+                tablenames.append(None)
+
+            while len(filenames) < len(tablenames)-1:
+                filenames.append(None)
+
+        while len(filenames) < len(tablenames):
+            filenames.append(None)
+
+        while len(tablenames) < len(filenames):
+            tablenames.append(None)
+
+        if exitcode == 0:
+            for i, f in enumerate(filenames):
+                t = tablenames[i]
+
+                try:
+                    self.__db.load(f, t, delim)
+                except FileNotFoundError as e:
+                    print('File not found: %s' % f)
+
+        return exitcode
+
+    def __cmd_showtables(self, args):
+        tablelist = {}
+        widths = [0, 0]
+
+        for table in self.__db.get_tables():
+            for row in self.__db.query("select count(*) from %s" % table):
+                count = row[0]
+
+            widths[0] = max(widths[0], len(table))
+            widths[1] = max(widths[1], len(str(count)))
+
+            tablelist[table] = {
+                'count': count,
+            }
+
+        for table in sorted(tablelist.keys()):
+            count = tablelist[table]['count']
+
+            print("%-*s  %-*s records" % (widths[0], table, widths[1], count))
+
+        print('')
+
+    def __cmd_use(self, args):
+        if len(args) != 1:
+            print('Expected 1 argument, got %s' % len(args))
+            return
+
+        try:
+            self.__rec.use_table(args[0])
+        except Record.BadArgumentError as e:
+            print(str(e))
+
+    def __cmd_next(self, args):
+        self.__rec.next()
+
+    def __cmd_prev(self, args):
+        self.__rec.prev()
+
+    def __cmd_show(self, args):
+        self.__rec.show()
+
+    def __cmd_showindexes(self, args):
+        self.__rec.showindexes()
 
     def __cmd_help(self, args):
         commands = self.__commands
@@ -266,67 +384,6 @@ class CLI(object):
 
         print('')
 
-    def __cmd_load(self, args):
-        filenames = []
-        tablenames = []
-        delim = None
-        exitcode = 0
-
-        getopt = getopts.getopts(['read'] + args, {
-            'a' : 1, 'as'    : 1,
-            'd' : 1, 'delim' : 1,
-        })
-
-        for c in getopt:
-            if c in ('-')            : filenames.append(getopt.optarg)
-            elif c in ('a', 'as')    : tablename.append(getopt.optarg)
-            elif c in ('d', 'delim') : delim = getopt.optarg
-            else                     : exitcode = 1
-
-            while len(tablenames) < len(filenames)-1:
-                tablenames.append(None)
-
-            while len(filenames) < len(tablenames)-1:
-                filenames.append(None)
-
-        while len(filenames) < len(tablenames):
-            filenames.append(None)
-
-        while len(tablenames) < len(filenames):
-            tablenames.append(None)
-
-        if exitcode == 0:
-            for i, f in enumerate(filenames):
-                t = tablenames[i]
-
-                self.__db.load(f, t, delim)
-
-        return exitcode
-
-    def __cmd_showtables(self, args):
-        tablelist = {}
-        widths = [0, 0]
-
-        for trow in self.__db.query("select name from sqlite_master where type='table'"):
-            table = trow[0]
-
-            for crow in self.__db.query("select count(*) from %s" % table):
-                count = crow[0]
-
-            widths[0] = max(widths[0], len(table))
-            widths[1] = max(widths[1], len(str(count)))
-
-            tablelist[table] = {
-                'count': count,
-            }
-
-        for table in sorted(tablelist.keys()):
-            count = tablelist[table]['count']
-
-            print("%-*s  %-*s records" % (widths[0], table, widths[1], count))
-
-        print('')
-
     def __cmd_exec(self, args):
         try:
             process = subprocess.Popen(args)
@@ -339,11 +396,69 @@ class CLI(object):
         print()
 
 
+class Record(object):
+    class BadArgumentError(Exception): pass
+
+    def __init__(self, database):
+        self.__db = database
+        self.__table = None
+        self.__rec = None
+
+    def get_table(self):
+        return self.__table
+
+    def get_recnum(self):
+        recnum = 0
+
+        if self.__rec:
+            recnum = self.__rec[0]
+
+        return recnum
+
+    def use_table(self, table):
+        if table in self.__db.get_tables():
+            self.__table = table
+            self.__rec = None
+        else:
+            raise Record.BadArgumentError('No such table: "%s"' % table)
+
+    def new(self):
+        self.__rec = None
+
+    def next(self):
+        nextnum = self.get_recnum() + 1
+
+        if self.__table is not None:
+            self.__rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, nextnum).fetchone()
+
+    def prev(self):
+        prevnum = self.get_recnum() - 1
+        prevnum = max(prevnum, 0)
+
+        if self.__table is not None:
+            self.__rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, prevnum).fetchone()
+
+    def show(self):
+        print(self.__rec)
+
+    def showindexes(self):
+        if self.__table is not None:
+            self.__db.execute('pragma index_list(%s)' % self.__table)
+
+
 class Database(object):
     def __init__(self, delim=','):
         self.__conn = sqlite3.connect('')
         self.__tablenames = []
         self.__delim = delim
+
+    def get_tables(self):
+        tables = []
+
+        for row in self.query("select name from sqlite_master where type='table' order by name"):
+            tables.append(row[0])
+
+        return tables
 
     def load(self, filename, tablename=None, delim=None):
         is_loaded = True
