@@ -153,6 +153,7 @@ class CLI(object):
     def __init__(self, database):
         self.__db = database
         self.__rec = Record(database)
+        self.__input = Input()
         self.__commands = {
             '!': {
                 'args': 'COMMAND [ARGS]',
@@ -198,6 +199,17 @@ class CLI(object):
                 'exec': self.__cmd_prev,
             },
 
+            'read': {
+                'args': 'INDEX',
+                'desc': 'Go to the record with recid INDEX.',
+                'exec': self.__cmd_read,
+            },
+
+            'count': {
+                'desc': 'Print the number of records in the current table.',
+                'exec': self.__cmd_count,
+            },
+
             'show': {
                 'desc': 'Show the current record.',
                 'exec': self.__cmd_show,
@@ -221,7 +233,6 @@ class CLI(object):
                 self.__runcommand(line)
 
             except EOFError as e:
-                print('')
                 break
 
             except AttributeError as e:
@@ -231,41 +242,31 @@ class CLI(object):
         table = self.__rec.get_table()
         recnum = self.__rec.get_recnum()
         prompt = 'csvsql' if table is None else '%s.%d' % (table, recnum)
-        plen = len(prompt)
-        line = ''
 
-        while True:
-            line += input('%*s> ' % (plen, prompt))
-            prompt = '... '
-
-            # Test for the line continuation character
-            if line.endswith('\\'):
-                line = line[:-1]
-                continue
-
-            # Test for parsability
-            try:
-                shlex.shlex(line, posix=True, punctuation_chars=True)
-            except ValueError:
-                line += '\n'
-                continue
-
-            # Done!
-            break
-
-        return line
+        return self.__input.get_command(prompt)
 
     def __runcommand(self, line):
-        parts = shlex.shlex(line, posix=True, punctuation_chars=True)
-        parts = list(parts)
+        tokens = shlex.shlex(line, posix=True, punctuation_chars=True)
+        tokens = list(tokens)
 
-        command = parts[0].lower() if len(parts) else None
-        args = parts[1:]
-
-        if command is None:
+        if len(tokens) == 0:
             pass
-        elif command in self.__commands:
-            self.__commands[command]['exec'](args)
+        elif tokens[0] in self.__commands:
+            # built-in commands may be separated by semicolon - parse and execute
+            while len(tokens):
+                parts = []
+
+                while len(tokens):
+                    t = tokens[0]
+                    tokens = tokens[1:]
+
+                    if t == ';': break
+                    parts.append(t)
+
+                command = parts[0]
+                args = parts[1:]
+
+                self.__commands[command]['exec'](args)
         else:
             self.__db.execute(line)
 
@@ -335,8 +336,6 @@ class CLI(object):
 
             print("%-*s  %-*s records" % (widths[0], table, widths[1], count))
 
-        print('')
-
     def __cmd_use(self, args):
         if len(args) != 1:
             print('Expected 1 argument, got %s' % len(args))
@@ -344,25 +343,58 @@ class CLI(object):
 
         try:
             self.__rec.use_table(args[0])
-        except Record.BadArgumentError as e:
+        except Record.RecordError as e:
             print(str(e))
 
     def __cmd_next(self, args):
-        self.__rec.next()
+        try:
+            self.__rec.next()
+        except Record.RecordError as e:
+            print(str(e))
 
     def __cmd_prev(self, args):
-        self.__rec.prev()
+        try:
+            self.__rec.prev()
+        except Record.RecordError as e:
+            print(str(e))
+
+    def __cmd_read(self, args):
+        if len(args) != 1:
+            print('Expected 1 argument, got %s' % len(args))
+            return
+
+        try:
+            recid = int(args[0])
+        except ValueError as e:
+            print('Not an integer: "%s"' % args[0])
+            return
+
+        try:
+            self.__rec.read(recid)
+        except Record.RecordError as e:
+            print(str(e))
+
+    def __cmd_count(self, args):
+        try:
+            count = self.__rec.count()
+            print(count)
+        except Record.RecordError as e:
+            print(str(e))
 
     def __cmd_show(self, args):
-        self.__rec.show()
+        try:
+            self.__rec.show()
+        except Record.RecordError as e:
+            print(str(e))
 
     def __cmd_showindexes(self, args):
-        self.__rec.showindexes()
+        try:
+            self.__rec.showindexes()
+        except Record.RecordError as e:
+            print(str(e))
 
     def __cmd_help(self, args):
         commands = self.__commands
-
-        print('')
 
         for cmd in args or sorted(commands.keys()):
             SYNTAX_WIDTH = 17
@@ -382,8 +414,6 @@ class CLI(object):
             else:
                 print('No help for: %s' % cmd)
 
-        print('')
-
     def __cmd_exec(self, args):
         try:
             process = subprocess.Popen(args)
@@ -396,8 +426,54 @@ class CLI(object):
         print()
 
 
+class Input(object):
+    def __init__(self):
+        self.__buffer = []
+
+    def get_command(self, prompt):
+        if not self.__buffer:
+            self.__buffer_input(prompt)
+
+        line = self.__buffer[0]
+        self.__buffer = self.__buffer[1:]
+
+        return line
+
+    def __buffer_input(self, prompt):
+        line = ''
+        
+        while True:
+            line += input('%*s> ' % (len(prompt), prompt))
+            prompt = '... '
+
+            # Test for the line continuation character
+            if line.endswith('\\'):
+                line = line[:-1]
+                continue
+
+            # Test for parsability
+            try:
+                shlex.shlex(line, posix=True, punctuation_chars=True)
+
+            except ValueError:
+                line += '\n'
+                continue
+
+            # Done!
+            break
+
+        # There is no real buffering here since we only read one line, buffer
+        # it, then pull it out, so the buffer never has more than one line.
+        # But we'll leave the buffering code here for future extension.
+
+        self.__buffer.append(line)
+
+
 class Record(object):
-    class BadArgumentError(Exception): pass
+    class RecordError(Exception): pass
+    class BadArgumentError(RecordError): pass
+    class DependencyError(RecordError): pass
+    class NoSuchRecord(RecordError): pass
 
     def __init__(self, database):
         self.__db = database
@@ -425,24 +501,63 @@ class Record(object):
     def new(self):
         self.__rec = None
 
+    def count(self):
+        count = 0
+
+        rec = self.__db.query('select count(*) from %s' % self.__table).fetchone()
+        if rec is not None:
+            count = rec[0]
+
+        return count
+
     def next(self):
         nextnum = self.get_recnum() + 1
 
-        if self.__table is not None:
-            self.__rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, nextnum).fetchone()
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+        else:
+            rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, nextnum).fetchone()
+
+        if rec is None:
+            raise Record.NoSuchRecord('No more records')
+        else:
+            self.__rec = rec
 
     def prev(self):
         prevnum = self.get_recnum() - 1
         prevnum = max(prevnum, 0)
 
-        if self.__table is not None:
-            self.__rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, prevnum).fetchone()
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+        else:
+            rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, prevnum).fetchone()
+
+        if rec is None:
+            raise Record.NoSuchRecord('No more records')
+        else:
+            self.__rec = rec
+
+    def read(self, recid):
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+        else:
+            rec = self.__db.query('select rowid, * from %s where rowid=?' % self.__table, recid).fetchone()
+
+        if rec is None:
+            raise Record.NoSuchRecord('No record with ID %d' % recid)
+        else:
+            self.__rec = rec
 
     def show(self):
-        print(self.__rec)
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+        else:
+            print(self.__rec)
 
     def showindexes(self):
-        if self.__table is not None:
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+        else:
             self.__db.execute('pragma index_list(%s)' % self.__table)
 
 
@@ -521,7 +636,7 @@ class Database(object):
         try:
             result = self.__conn.cursor().execute(command, args)
         except sqlite3.OperationalError as e:
-            sys.stderr.write('%s %s -- %s\n\n' % (command, args, str(e)))
+            sys.stderr.write('%s %s -- %s\n' % (command, args, str(e)))
 
         return result
 
@@ -558,12 +673,8 @@ class Database(object):
                 print(delim.join(values))
                 count += 1
 
-            # Empty line after each command that printed something
-            if count:
-                print('')
-
         except sqlite3.OperationalError as e:
-            sys.stderr.write('%s -- %s\n\n' % (command, str(e)))
+            sys.stderr.write('%s -- %s\n' % (command, str(e)))
 
 
 def smart_open(filename, mode='r'):
