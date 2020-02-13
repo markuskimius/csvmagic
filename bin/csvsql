@@ -238,10 +238,29 @@ class CLI(object):
             except AttributeError as e:
                 pass
 
+    def __completer(self, text, state):
+        completed = ''
+        counter = 0
+
+        for command in self.__commands.keys():
+            if command.startswith(text):
+                completed = command
+                counter += 1
+
+            if counter > state: break
+
+        if counter <= state: completed = None
+
+        return completed
+
     def __getcommand(self):
         table = self.__rec.get_table()
         recnum = self.__rec.get_recnum()
         prompt = 'csvsql' if table is None else '%s.%d' % (table, recnum)
+
+        completion_words = list(self.__commands.keys())
+        completion_words += self.__db.get_tables()
+        self.__input.set_completion_words(completion_words)
 
         return self.__input.get_command(prompt)
 
@@ -429,6 +448,28 @@ class CLI(object):
 class Input(object):
     def __init__(self):
         self.__buffer = []
+        self.__completion_words = []
+
+        readline.set_completer(self.__completer)
+        readline.parse_and_bind('tab: complete')
+
+    def set_completion_words(self, words):
+        self.__completion_words = words
+
+    def __completer(self, text, state):
+        completed = ''
+        counter = 0
+
+        for command in self.__completion_words:
+            if command.startswith(text):
+                completed = command
+                counter += 1
+
+            if counter > state: break
+
+        if counter <= state: completed = None
+
+        return completed
 
     def get_command(self, prompt):
         if not self.__buffer:
@@ -441,7 +482,7 @@ class Input(object):
 
     def __buffer_input(self, prompt):
         line = ''
-        
+
         while True:
             line += input('%*s> ' % (len(prompt), prompt))
             prompt = '... '
