@@ -224,6 +224,12 @@ class CLI(object):
                 'exec': self.__cmd_read,
             },
 
+            'search': {
+                'args': 'CONDITION',
+                'desc': 'Show all records matching SQL CONDITION.  CONDITION is typically quoted.',
+                'exec': self.__cmd_search,
+            },
+
             'count': {
                 'desc': 'Print the number of records in the current table.',
                 'exec': self.__cmd_count,
@@ -275,7 +281,7 @@ class CLI(object):
     def __getcommand(self):
         table = self.__rec.get_table()
         recnum = self.__rec.get_recnum()
-        prompt = 'csvsql' if table is None else '%s.%d' % (table, recnum)
+        prompt = 'csvsql' if table is None else '%s.%s' % (table, recnum)
 
         completion_words = list(self.__commands.keys())
         completion_words += self.__db.get_tables()
@@ -409,6 +415,16 @@ class CLI(object):
 
         try:
             self.__rec.read(recid)
+        except Record.RecordError as e:
+            print(str(e))
+
+    def __cmd_search(self, args):
+        if len(args) != 1:
+            print('Expected 1 argument, got %s' % len(args))
+            return
+
+        try:
+            self.__rec.search(args[0])
         except Record.RecordError as e:
             print(str(e))
 
@@ -608,6 +624,18 @@ class Record(object):
         else:
             self.__rec = rec
 
+    def search(self, condition):
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+
+        cursor = self.__db.query('select rowid, * from %s where %s' % (self.__table, condition))
+        if cursor is None:
+            print('No record found')
+            return
+
+        for self.__rec in cursor:
+            self.show()
+
     def show(self):
         if self.__table is None:
             raise Record.DependencyError('Must set table first')
@@ -619,7 +647,6 @@ class Record(object):
             raise Record.DependencyError('Must set table first')
         else:
             self.__db.execute('pragma index_list(%s)' % self.__table)
-
 
 class Database(object):
     def __init__(self, delim=','):
