@@ -49,6 +49,7 @@ SCRIPTNAME = os.path.basename(__file__)
 
 class opts:
     files = []
+    tables = []
     delim = None
     commands = []
 
@@ -64,6 +65,10 @@ usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
 Options:
   FILE                  csv file(s) to query.
+
+  -a, --as=TABLE        Load FILE into the table named TABLE.  If this option
+                        is omitted, the table name defaults to the base name of
+                        the FILE.  This option may be specified once per FILE.
 
   -c, --command=SQL     SQL commands to execute.  May be specified multiple
                         times, once per SQL command.
@@ -100,6 +105,7 @@ def main():
     errcount = 0
 
     getopt = getopts.getopts(sys.argv, {
+        'a' : 1, 'as'      : 1,
         'c' : 1, 'command' : 1,
         'd' : 1, 'delim'   : 1,
         'h' : 0, 'help'    : 0,
@@ -107,10 +113,23 @@ def main():
 
     for c in getopt:
         if c in ('-')                   : opts.files.append(getopt.optarg)
+        elif c in ('a', 'as')           : opts.tables.append(getopt.optarg)
         elif c in ('c', 'command')      : opts.commands.append(getopt.optarg)
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
+
+        while len(opts.tables) < len(opts.files)-1:
+            opts.tables.append(None)
+
+        while len(opts.files) < len(opts.tables)-1:
+            opts.files.append(None)
+
+    while len(opts.tables) < len(opts.files):
+        opts.tables.append(None)
+
+    while len(opts.files) < len(opts.tables):
+        opts.files.append(None)
 
     # Sanity check
     if errcount:
@@ -121,8 +140,8 @@ def main():
     db = Database()
 
     # Load all tables
-    for f in opts.files:
-        db.load(f)
+    for i, f in enumerate(opts.files):
+        db.load(f, opts.tables[i])
 
     # Execute SQL commands
     for c in opts.commands:
