@@ -557,28 +557,45 @@ class Record(object):
     def __init__(self, database):
         self.__db = database
         self.__table = None
-        self.__rec = None
+        self.__fields = [ 'rowid' ]
+        self.__values = [ 0 ]
+        self.__fieldlen = 0
+        self.__dataindex = 1
+
+    def __getitem__(self, name):
+        try:
+            index = self.__fields.index(name)
+            value = self.__values[index]
+        except (ValueError, IndexError) as e:
+            value = None
+
+        return value
 
     def get_table(self):
         return self.__table
 
     def get_recnum(self):
-        recnum = 0
-
-        if self.__rec:
-            recnum = self.__rec[0]
-
-        return recnum
+        return self.__getitem__('rowid') or 0
 
     def use_table(self, table):
         if table in self.__db.get_tables():
             self.__table = table
-            self.__rec = None
+            self.new()
         else:
             raise Record.BadArgumentError('No such table: "%s"' % table)
 
     def new(self):
-        self.__rec = None
+        cursor = self.__db.query('select rowid, * from %s limit 1' % self.__table)
+        self.__fields = []
+        self.__values = []
+        self.__fieldlen = 0
+
+        for cell in cursor.description:
+            self.__fields.append(cell[0])
+            self.__values.append(None)
+            self.__fieldlen = max(self.__fieldlen, len(cell[0]))
+
+        cursor.close()
 
     def next(self):
         nextnum = self.get_recnum() + 1
@@ -591,7 +608,7 @@ class Record(object):
         if rec is None:
             raise Record.NoSuchRecord('No more records')
         else:
-            self.__rec = rec
+            self.__read_rec(rec)
 
     def prev(self):
         prevnum = self.get_recnum() - 1
@@ -605,7 +622,7 @@ class Record(object):
         if rec is None:
             raise Record.NoSuchRecord('No more records')
         else:
-            self.__rec = rec
+            self.__read_rec(rec)
 
     def read(self, recid):
         if self.__table is None:
@@ -616,7 +633,11 @@ class Record(object):
         if rec is None:
             raise Record.NoSuchRecord('No record with ID %d' % recid)
         else:
-            self.__rec = rec
+            self.__read_rec(rec)
+
+    def __read_rec(self, rec):
+        for i, field in enumerate(self.__fields):
+            self.__values[i] = rec[i]
 
     def count(self, condition=None):
         condition = '1' if condition is None else condition
@@ -640,14 +661,24 @@ class Record(object):
             print('No record found')
             return
 
-        for self.__rec in cursor:
+        for rec in cursor:
+            self.__read_rec(rec)
             self.show()
 
     def show(self):
         if self.__table is None:
             raise Record.DependencyError('Must set table first')
-        else:
-            print(self.__rec)
+
+        for i, field in enumerate(self.__fields):
+            if i < self.__dataindex: continue
+            value = self.__values[i]
+
+            if value is None:
+                value = 'null'
+
+            print('%-*s : %s' % (self.__fieldlen, field, value))
+
+        print('')
 
     def showindexes(self):
         if self.__table is None:
