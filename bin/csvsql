@@ -231,7 +231,8 @@ class CLI(object):
             },
 
             'count': {
-                'desc': 'Print the number of records in the current table.',
+                'args': '[CONDITION]',
+                'desc': 'Print the number of records in the current table [that matches CONDITION].',
                 'exec': self.__cmd_count,
             },
 
@@ -429,8 +430,10 @@ class CLI(object):
             print(str(e))
 
     def __cmd_count(self, args):
+        condition = args[0] if len(args) else None
+
         try:
-            count = self.__rec.count()
+            count = self.__rec.count(condition)
             print(count)
         except Record.RecordError as e:
             print(str(e))
@@ -577,15 +580,6 @@ class Record(object):
     def new(self):
         self.__rec = None
 
-    def count(self):
-        count = 0
-
-        rec = self.__db.query('select count(*) from %s' % self.__table).fetchone()
-        if rec is not None:
-            count = rec[0]
-
-        return count
-
     def next(self):
         nextnum = self.get_recnum() + 1
 
@@ -623,6 +617,19 @@ class Record(object):
             raise Record.NoSuchRecord('No record with ID %d' % recid)
         else:
             self.__rec = rec
+
+    def count(self, condition=None):
+        condition = '1' if condition is None else condition
+        count = 0
+
+        if self.__table is None:
+            raise Record.DependencyError('Must set table first')
+
+        rec = self.__db.query('select count(*) from %s where %s' % (self.__table, condition)).fetchone()
+        if rec is not None:
+            count = rec[0]
+
+        return count
 
     def search(self, condition):
         if self.__table is None:
