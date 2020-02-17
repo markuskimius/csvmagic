@@ -173,6 +173,9 @@ class CLI(object):
         self.__db = database
         self.__rec = Record(database)
         self.__input = Input()
+        self.__variables = {
+            'filter': None,
+        }
         self.__commands = {
             '!': {
                 'args': 'COMMAND [ARGS]',
@@ -191,10 +194,16 @@ class CLI(object):
                 'exec': self.__cmd_echo,
             },
 
-            'filter': {
-                'args': '[clear|PROGRAM]',
-                'desc': 'Use PROGRAM to output csv rows or clear the filter.',
-                'exec': self.__cmd_filter,
+            'set': {
+                'args': '[NAME VALUE]',
+                'desc': 'Set the variable NAME to VALUE.  If omitted, show all variables and their values.',
+                'exec': self.__cmd_set,
+            },
+
+            'unset': {
+                'args': 'NAME',
+                'desc': 'Unset variable NAME.',
+                'exec': self.__cmd_unset,
             },
 
             'load': {
@@ -265,9 +274,11 @@ class CLI(object):
                 self.runcommand(line)
 
             except EOFError as e:
+                print(str(e))
                 break
 
             except AttributeError as e:
+                print(str(e))
                 pass
 
     def __completer(self, text, state):
@@ -488,20 +499,58 @@ class CLI(object):
 
         print()
 
-    def __cmd_filter(self, args):
+    def __cmd_set(self, args):
+        if len(args) < 1:
+            output = FilteredOutput(self.__variables['filter'])
+            delim = self.__db.get_delim()
+            values = []
+            cols = []
+
+            for i, field in enumerate(sorted(self.__variables.keys())):
+                cols.append(libcsv.Value(field).minquoted(delim))
+
+            output.write('%s\n' % delim.join(cols))
+
+            for i, field in enumerate(sorted(self.__variables.keys())):
+                value = self.__variables[field]
+
+                v = libcsv.Value(value).strquoted(delim)
+
+                if v == '':
+                    v = 'NULL'
+
+                values.append(v)
+
+            output.write('%s\n' % delim.join(values))
+
+            del(output)
+            return
+
+        if args[0] not in self.__variables:
+            print('Invalid variable: %s' % args[0])
+            return
+
+        if len(args) < 2:
+            print(self.__variables[args[0]])
+            return
+
+        self.__variables[args[0]] = args[1]
+        self.__loadvars()
+
+    def __cmd_unset(self, args):
         if len(args) != 1:
             print('Expected 1 argument, got %s' % len(args))
             return
 
-        if args[0] == 'clear':
-            self.__db.set_filter(None)
-            self.__rec.set_filter(None)
+        if args[0] in self.__variables:
+            self.__variables[args[0]] = None
+            self.__loadvars()
         else:
-            try:
-                self.__db.set_filter(args[0])
-                self.__rec.set_filter(args[0])
-            except FileNotFoundError as e:
-                print(str(e))
+            print('Invalid variable: %s' % args[0])
+
+    def __loadvars(self):
+        self.__db.set_filter(self.__variables['filter'])
+        self.__rec.set_filter(self.__variables['filter'])
 
 
 class Input(object):
