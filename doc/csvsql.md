@@ -39,5 +39,22 @@ ID,FIRST_NAME,LAST_NAME,ID,EMAIL
 1001,John,Doe,1001,jdoe@email.com
 ```
 
-See the man page for more options and information.
+See the man page for other `csvsql` options and information.
 
+
+# Interactive Mode
+
+If the `-c` command is omitted, `csvsql` enter into an interactive mode where
+one SQL command may be issued per line.
+
+The interactive mode also supported a few other convenience commands.  Type
+`help` on the interactive prompt for more information.
+
+
+# SQL Syntax
+
+`csvsql` uses [SQLite] to handle SQL commands.  See the its webpage for
+the full list of supported SQL commands.
+
+
+[SQLite]: https://www.sqlite.org/lang.html
