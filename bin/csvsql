@@ -145,7 +145,7 @@ def main():
 
     # Execute SQL commands
     for c in opts.commands:
-        db.execute(c)
+        CLI(db).runcommand(c)
 
     # If no commands were specified, launch the CLI
     if not opts.commands:
@@ -189,6 +189,12 @@ class CLI(object):
                 'args': '[ARGS]',
                 'desc': 'Print ARGS to stdout.',
                 'exec': self.__cmd_echo,
+            },
+
+            'filter': {
+                'args': '[clear|PROGRAM]',
+                'desc': 'Use PROGRAM to output csv rows or clear the filter.',
+                'exec': self.__cmd_filter,
             },
 
             'load': {
@@ -256,7 +262,7 @@ class CLI(object):
         while True:
             try:
                 line = self.__getcommand()
-                self.__runcommand(line)
+                self.runcommand(line)
 
             except EOFError as e:
                 break
@@ -290,7 +296,7 @@ class CLI(object):
 
         return self.__input.get_command(prompt)
 
-    def __runcommand(self, line):
+    def runcommand(self, line):
         tokens = shlex.shlex(line, posix=True, punctuation_chars=True)
         tokens = list(tokens)
 
@@ -482,6 +488,21 @@ class CLI(object):
 
         print()
 
+    def __cmd_filter(self, args):
+        if len(args) != 1:
+            print('Expected 1 argument, got %s' % len(args))
+            return
+
+        if args[0] == 'clear':
+            self.__db.set_filter(None)
+            self.__rec.set_filter(None)
+        else:
+            try:
+                self.__db.set_filter(args[0])
+                self.__rec.set_filter(args[0])
+            except FileNotFoundError as e:
+                print(str(e))
+
 
 class Input(object):
     def __init__(self):
@@ -548,6 +569,26 @@ class Input(object):
         self.__buffer.append(line)
 
 
+class FilteredOutput(object):
+    def __init__(self, filter=None):
+        if filter is None:
+            self.__file = sys.stdout
+        else:
+            reader, writer = os.pipe()
+            self.__proc = subprocess.Popen(filter, stdin=reader, shell=True)
+            self.__file = os.fdopen(writer, 'w')
+
+    def __del__(self):
+        if self.__file == sys.stdout:
+            return
+
+        self.__file.close()
+        self.__proc.wait()
+
+    def write(self, text):
+        self.__file.write(text)
+
+
 class Record(object):
     class RecordError(Exception): pass
     class BadArgumentError(RecordError): pass
@@ -561,6 +602,7 @@ class Record(object):
         self.__values = [ 0 ]
         self.__fieldlen = 0
         self.__dataindex = 1
+        self.__filter = None
 
     def __getitem__(self, name):
         try:
@@ -576,6 +618,9 @@ class Record(object):
 
     def get_recnum(self):
         return self.__getitem__('rowid') or 0
+
+    def set_filter(self, filter):
+        self.__filter = filter
 
     def use_table(self, table):
         if table in self.__db.get_tables():
@@ -669,16 +714,31 @@ class Record(object):
         if self.__table is None:
             raise Record.DependencyError('Must set table first')
 
+        output = FilteredOutput(self.__filter)
+        delim = self.__db.get_delim()
+        values = []
+        cols = []
+
         for i, field in enumerate(self.__fields):
             if i < self.__dataindex: continue
-            value = self.__values[i]
 
-            if value is None:
-                value = 'null'
+            cols.append(libcsv.Value(field).minquoted(delim))
 
-            print('%-*s : %s' % (self.__fieldlen, field, value))
+        output.write('%s\n' % delim.join(cols))
 
-        print('')
+        for i, value in enumerate(self.__values):
+            if i < self.__dataindex: continue
+
+            v = libcsv.Value(value).strquoted(delim)
+
+            if v == '':
+                v = 'NULL'
+
+            values.append(v)
+
+        output.write('%s\n' % delim.join(values))
+
+        del(output)
 
     def showindexes(self):
         if self.__table is None:
@@ -686,11 +746,19 @@ class Record(object):
         else:
             self.__db.execute('pragma index_list(%s)' % self.__table)
 
+
 class Database(object):
     def __init__(self, delim=','):
         self.__conn = sqlite3.connect('')
         self.__tablenames = []
         self.__delim = delim
+        self.__filter = None
+
+    def get_delim(self):
+        return self.__delim
+
+    def set_filter(self, filter):
+        self.__filter = filter
 
     def get_tables(self):
         tables = []
@@ -766,6 +834,7 @@ class Database(object):
         return result
 
     def execute(self, command, *args):
+        output = FilteredOutput(self.__filter)
         delim = self.__delim
         count = 0
 
@@ -784,7 +853,7 @@ class Database(object):
                     for j, cell in enumerate(cursor.description):
                         cols.append(libcsv.Value(cell[0]).minquoted(delim))
 
-                    print(delim.join(cols))
+                    output.write('%s\n' % delim.join(cols))
 
                 # Print row values
                 for j, cell in enumerate(row):
@@ -795,11 +864,14 @@ class Database(object):
 
                     values.append(v)
 
-                print(delim.join(values))
+                output.write('%s\n' % delim.join(values))
                 count += 1
 
         except sqlite3.OperationalError as e:
             sys.stderr.write('%s -- %s\n' % (command, str(e)))
+
+        finally:
+            del(output)
 
 
 def smart_open(filename, mode='r'):
