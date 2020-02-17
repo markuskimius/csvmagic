@@ -2,7 +2,7 @@
 .SH NAME
 csvsql \- query one or more csv files
 .SH SYNOPSIS
-\fBcsvsql\fP [\-h] [\-c \fISQL\fP] [\-d \fIDELIM\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvsql\fP [\-h] [\-c \fISQL\fP] [\-d \fIDELIM\fP] [\fIFILE\fP [-a TABLE] [\fIFILE\fP [-a TABLE] ...]]
 .SH DESCRIPTION
 \fBcsvsql\fP load one or more csv files \fIFILE\fP into memory as database
 tables that can be queried or manipulated using \fISQL\fP.
@@ -11,9 +11,14 @@ tables that can be queried or manipulated using \fISQL\fP.
 \fB-h\fP, \fB--help\fP
 Output a usage message and exit.
 .TP
+\fB-a\fP \fITABLE\fP, \fB--as\fP=\fITABLE\fP
+Load the preceding or following \fIFILE\fP into \fITABLE\fP.  By default,
+\fIFILE\fP is loaded into the table whose name is same as the basename of the
+\fIFILE\fP without the extension.
+.TP
 \fB-c\fP \fISQL\fP, \fB--command\fP=\fISQL\fP
 \fISQL\fP command to execute.  May be specified more than once to execute more
-than one SQL command.
+than one SQL command.  If omitted, csvsql is started in interactive mode.
 .TP
 \fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
 Use \fIDELIM\fP as the value delimiter of input FILEs, where \fIDELIM\fP may be
