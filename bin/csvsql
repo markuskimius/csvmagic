@@ -92,7 +92,6 @@ Environment Variables:
                         chosen.  If the environment variable is not set, it
                         defaults to '{libcsv.DELIMS}'.  CSV_DELIMS may include
                         escape characters.
-
 '''
 
     print(usage.__doc__.format(**globals()))
