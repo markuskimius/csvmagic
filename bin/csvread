@@ -40,7 +40,7 @@ import getopts
 import importlib
 from itertools import zip_longest
 
-__copyright__ = 'Copyright 2019 Mark Kim'
+__copyright__ = 'Copyright 2019-2022 Mark Kim'
 __license__ = 'Apache 2.0'
 
 

@@ -163,22 +163,29 @@ DESCRIPTION
        piped to cgrep(1) to look for records containing a value in a specific column.
 
    Options
-       -h, --help
-              Output a usage message and exit.
-
-       -n, --no-header
-              The  file  contains  no  header.  The values are numbered by their column positions
-              instead.
-
-       -s, --strip-quotes
-              Strip quotes from field values.
-
        -d DELIM, --delim=DELIM
               Use DELIM as the value delimiter, where DELIM may be 'p' for the pipe (|), 't'  for
               the  tab  (\t),  'a'  for the SOH (ASCII 1), or other string literal of one or more
               characters and Python string escape sequences.  DELIM may  include  escape  charac-
               ters.   By  default  the delimiter is guessed from the characters in the CSV_DELIMS
               environment variable.
+
+       -f, --diff-only
+              Show only the fields that differ between each row.
+
+       -g, --show-change
+              Show only the fields that differ between each row, and show how they changed.
+
+       -m, --multitable
+              The file may contain more than one csv table, divided by an empty line.  The second
+              set of table is treated as though it were the start of a new csv file.
+
+       -n, --no-header
+              The file contains no header.  The values are numbered by their column positions
+              instead.
+
+       -s, --strip-quotes
+              Strip quotes from field values.
 
        -t LIB, --translator=LIB
               Use the plugin library LIB to preprocess the values before display.  LIB may be the

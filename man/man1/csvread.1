@@ -14,8 +14,19 @@ columns.  Its output can be piped to cgrep(1) to look for records containing a
 value in a specific column.
 .SS Options
 .TP
-\fB-h\fP, \fB--help\fP
-Output a usage message and exit.
+\fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
+Use \fIDELIM\fP as the value delimiter, where \fIDELIM\fP may be '\fBp\fP' for
+the pipe (\fB|\fP), '\fBt\fP' for the tab (\fB\\t\fP), '\fBa\fP' for the SOH
+(ASCII 1), or other string literal of one or more characters and Python string
+escape sequences.  \fIDELIM\fP may include escape characters.  By default the
+delimiter is guessed from the characters in the \fBCSV_DELIMS\fP environment
+variable.
+.TP
+\fB-f\fP, \fB--diff-only\fP
+Show only the fields that differ between each row.
+.TP
+\fB-g\fP, \fB--show-change\fP
+Show only the fields that differ between each row, and show how they changed.
 .TP
 \fB-m\fP, \fB--multitable\fP
 The file may contain more than one csv table, divided by an empty line.  The
@@ -27,14 +38,6 @@ instead.
 .TP
 \fB-s\fP, \fB--strip-quotes\fP
 Strip quotes from field values.
-.TP
-\fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
-Use \fIDELIM\fP as the value delimiter, where \fIDELIM\fP may be '\fBp\fP' for
-the pipe (\fB|\fP), '\fBt\fP' for the tab (\fB\\t\fP), '\fBa\fP' for the SOH
-(ASCII 1), or other string literal of one or more characters and Python string
-escape sequences.  \fIDELIM\fP may include escape characters.  By default the
-delimiter is guessed from the characters in the \fBCSV_DELIMS\fP environment
-variable.
 .TP
 \fB-t\fP \fILIB\fP, \fB--translator\fP=\fILIB\fP
 Use the plugin library \fILIB\fP to preprocess the values before display.
