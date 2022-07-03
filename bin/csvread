@@ -38,6 +38,7 @@ import errno
 import libcsv
 import getopts
 import importlib
+from itertools import zip_longest
 
 __copyright__ = 'Copyright 2019 Mark Kim'
 __license__ = 'Apache 2.0'
@@ -55,6 +56,7 @@ class opts:
     strip_quotes = False
     translator = None
     multitable = False
+    diff = 0
 
 
 ##############################################################################
@@ -77,6 +79,11 @@ Options:
                         DELIM  may  include  escape characters.  By default the
                         delimiter is guessed from the characters in the
                         CSV_DELIMS environment variable.
+
+  -f, --diff-only       Show only the fields that differ between each row.
+
+  -g, --show-change     Show only the fields that differ between each row, and
+                        show how they changed.
 
   -n, --no-header       The file contains no header.  The values are numbered
                         by their column positions instead.
@@ -121,6 +128,8 @@ def main():
         'n' : 0, 'no-header'    : 0,
         's' : 0, 'strip-quotes' : 0,
         'd' : 1, 'delim'        : 1,
+        'f' : 0, 'diff-only'    : 0,
+        'g' : 0, 'show-change'  : 0,
         't' : 1, 'translator'   : 1,
         'm' : 0, 'multitable'   : 0,
         'h' : 0, 'help'         : 0,
@@ -129,6 +138,8 @@ def main():
     for c in getopt:
         if c in ('-')                   : opts.files.append(getopt.optarg)
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('f', 'diff-only')    : opts.diff = 1
+        elif c in ('g', 'show-change')  : opts.diff = 2
         elif c in ('n', 'no-header')    : opts.has_header = False
         elif c in ('s', 'strip-quotes') : opts.strip_quotes = True
         elif c in ('t', 'translator')   : opts.translator = load_translator(getopt.optarg)
@@ -201,11 +212,23 @@ def smart_open(filename, mode='r'):
 def csvread(file):
     reader = libcsv.Reader(file, delim=opts.delim, has_header=opts.has_header, is_multitable=opts.multitable)
     translator = opts.translator.Translator()
+    lastrow = {};
 
     # Data rows
     for row in reader:
         cell_list = []
         has_name = False
+        is_firstrow = False
+
+        # Is this the first row?
+        if row.rownum() == 0:
+            is_firstrow = True
+        elif row.rownum() == 1 and opts.has_header:
+            is_firstrow = True
+
+        # Reset lastrow on firstrow
+        if is_firstrow:
+            lastrow = {}
 
         # Skip empty lines
         if len(row) == 0: continue
@@ -220,11 +243,17 @@ def csvread(file):
 
             cell_list.append(cell)
 
-        # Calculate the width
+        # Calculate the width of the column names
         if has_name:
-            width = max(len(cell.colname() or '') for cell in cell_list)
+            colwidth = max(len(cell.colname() or '') for cell in cell_list)
         else:
-            width = len(str(len(cell_list)))
+            colwidth = len(str(len(cell_list)))
+
+        # Calculate the width of the column values
+        if opts.diff == 2 and lastrow:
+            valwidth = max(width_of(value) for value in lastrow.values())
+        else:
+            valwidth = 0
 
         # Print each cell
         for cell in cell_list:
@@ -238,14 +267,61 @@ def csvread(file):
             else:
                 val = cell.value()
 
+            # Diff handling
+            if opts.diff and lastrow.get(colname) == val:
+                continue
+
             # Print each line of the cell value
-            for i, v in enumerate(val.split('\n')):
-                if i == 0:
-                    print('%-*s : %s' % (width, colname, v))
-                else:
-                    print('%-*s   %s' % (width, '', v))
+            print_cell(colwidth, colname, valwidth, lastrow.get(colname,''), val, is_firstrow)
+
+            # Remember this cell value for the next row
+            lastrow[colname] = val
+
+        # Print deleted cells
+        if opts.diff:
+            newcols = [(cell.colname() or '') for cell in cell_list]
+            allcols = lastrow.keys()
+            delcols = []
+
+            for colname in allcols:
+                if colname not in newcols:
+                    delcols += [colname]
+
+            for colname in delcols:
+                print_cell(colwidth, colname, valwidth, lastrow[colname], '', is_firstrow)
+                del lastrow[colname]
 
         print('')
+
+
+def width_of(multiline_text):
+    return max(len(line) for line in multiline_text.split('\n'))
+
+
+def height_of(multiline_text):
+    return len(multiline_text.split('\n'))
+
+
+def print_cell(colwidth, colname, valwidth, fromvalue, tovalue, is_firstrow):
+    fromlines = fromvalue.split('\n');
+    tolines = tovalue.split('\n');
+    showdiff = (opts.diff == 2)
+
+    if is_firstrow:
+        showdiff = False
+
+    if not showdiff:
+        fromlines = []
+
+    for i, line in enumerate(zip_longest(fromlines, tolines, fillvalue='')):
+        if showdiff and i == 0:
+            print('%-*s : %-*s => %s' % (colwidth, colname, valwidth, line[0], line[1]))
+        elif showdiff:
+            print('%-*s   %-*s    %s' % (colwidth, '', valwidth, line[0], line[1]))
+        elif i == 0:
+            print('%-*s : %-*s'       % (colwidth, colname, valwidth, line[1]))
+        else:
+            print('%-*s   %-*s'       % (colwidth, '', valwidth, line[1]))
 
 
 class DefaultTranslatorModule(object):
