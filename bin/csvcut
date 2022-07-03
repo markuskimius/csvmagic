@@ -371,7 +371,7 @@ class FieldSelectorByColumnName(FieldSelector):
 
 class FieldSelectorByColumnRegex(FieldSelector):
     def __init__(self, regex, mod):
-        if mod: regex += ('(?%s)' % mod)
+        if mod: regex = ('(?%s)' % mod) + regex
 
         self.__regex_rc = re.compile(regex)
 
@@ -421,7 +421,7 @@ class FieldSelectorByColumnRange(FieldSelector):
 
 class FieldSelectorByValueRegex(FieldSelector):
     def __init__(self, regex, mod):
-        if mod: regex += ('(?%s)' % mod)
+        if mod: regex = ('(?%s)' % mod) + regex
 
         self.__regex_rc = re.compile(regex)
 
