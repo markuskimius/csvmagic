@@ -34,7 +34,7 @@ import errno
 import libcsv
 import getopts
 
-__copyright__ = 'Copyright 2019 Mark Kim'
+__copyright__ = 'Copyright 2019-2022 Mark Kim'
 __license__ = 'Apache 2.0'
 
 
@@ -48,6 +48,7 @@ class opts:
     delim = None
     fields = None
     multitable = False
+    inverse = False
 
 
 ##############################################################################
@@ -61,6 +62,14 @@ usage: {SCRIPTNAME} [OPTIONS] [FILES]
 
 Options:
   FILE                  csv file(s) to cut.
+
+  -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
+                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
+                        the SOH (ASCII 1), or other string literal of one or
+                        more characters and Python  string  escape  sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
 
   -f, --fields=FIELDS   Fields to extract.  FIELDS is a comma separated list of
                         field criteria to extract from the files.  Each
@@ -93,16 +102,10 @@ Options:
                         The order in which the criteria are specified is the
                         order in which they are output.
 
-  -d, --delim=DELIM     Use  DELIM as the value delimiter, where DELIM may be
-                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
-                        the SOH (ASCII 1), or other string literal of one or
-                        more characters and Python  string  escape  sequences.
-                        DELIM  may  include  escape characters.  By default the
-                        delimiter is guessed from the characters in the
-                        CSV_DELIMS environment variable.
-
   -m, --multitable      Multitable support.  One csv file may include multiple
                         csv data by separating them by an empty line.
+
+  -v, --inverse         Extract non-matching fields only.
 
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
@@ -130,6 +133,7 @@ def main():
         'd' : 1, 'delim'      : 1,
         'f' : 1, 'fields'     : 1,
         'm' : 0, 'multitable' : 0,
+        'v' : 0, 'inverse'    : 0,
         'h' : 0, 'help'       : 0,
     })
 
@@ -138,6 +142,7 @@ def main():
         elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
         elif c in ('f', 'fields')       : opts.fields = parse_fieldselector(getopt.optarg)
         elif c in ('m', 'multitable')   : opts.multitable = True
+        elif c in ('v', 'inverse')      : opts.inverse = True
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -244,6 +249,10 @@ def csvcut(file, fields):
             selected = selector.select(selectable)
 
             output.extend(selected)
+
+        # Inverse only outputs unselected cells
+        if opts.inverse:
+            output = selectable.unselected();
 
         # Output the selected fields
         for i, value in enumerate(output):

@@ -27,7 +27,7 @@ function result() {
 function test-script() {
     local reference="${REFDIR}/${1}" && shift
     local exitcode=0
-    local width=66
+    local width=70
 
     if ! [[ -e "$reference" ]]; then
         echo "$reference does not exist, generating..."
@@ -95,6 +95,8 @@ function test-csvalign() {
 
 
 function test-csvcut() {
+    local extrasuffix=$1
+    local extraopts=$2
     local file
     local -A colcount=(
         [empty]=0
@@ -127,36 +129,36 @@ function test-csvcut() {
         local suffix
 
         # Delimiters
-        test-script csvcut_${file}_two_csv csvcut -f1-2 ${file}.csv
-        test-script psvcut_${file}_two_psv csvcut -f1-2 ${file}.psv
-        test-script tsvcut_${file}_two_tsv csvcut -f1-2 ${file}.tsv
-        test-script csvcut_${file}_two_rsv csvcut -f1-2 -d^ ${file}.rsv
-        test-script csvcut_${file}_two_rsv csvcut -f1-2 --delim=^ ${file}.rsv
-        CSV_DELIMS=^ test-script csvcut_${file}_two_rsv csvcut -f1-2 ${file}.rsv
+        test-script csvcut_${file}_two_csv${extrasuffix} csvcut ${extraopts} -f1-2 ${file}.csv
+        test-script psvcut_${file}_two_psv${extrasuffix} csvcut ${extraopts} -f1-2 ${file}.psv
+        test-script tsvcut_${file}_two_tsv${extrasuffix} csvcut ${extraopts} -f1-2 ${file}.tsv
+        test-script csvcut_${file}_two_rsv${extrasuffix} csvcut ${extraopts} -f1-2 -d^ ${file}.rsv
+        test-script csvcut_${file}_two_rsv${extrasuffix} csvcut ${extraopts} -f1-2 --delim=^ ${file}.rsv
+        CSV_DELIMS=^ test-script csvcut_${file}_two_rsv${extrasuffix} csvcut ${extraopts} -f1-2 ${file}.rsv
 
         # RANGE
-        test-script csvcut_${file}_all csvcut -f- ${file}.csv
-        test-script csvcut_${file}_all csvcut -f1- ${file}.csv
-        test-script csvcut_${file}_all csvcut -f1,2- ${file}.csv
-        test-script csvcut_${file}_all csvcut -f1-$lastnum ${file}.csv
-        test-script csvcut_${file}_all csvcut -f1,2-$lastnum ${file}.csv
-        test-script csvcut_${file}_all csvcut -f "$allnums" ${file}.csv
-        test-script csvcut_${file}_all csvcut -f "${allnumsbut},${lastnum}" ${file}.csv
-        test-script csvcut_${file}_all csvcut -f "${allnumsbut},${lastname}" ${file}.csv
-        test-script csvcut_${file}_all csvcut -f "${allnames}" ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f- ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f1- ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f1,2- ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f1-$lastnum ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f1,2-$lastnum ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f "$allnums" ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f "${allnumsbut},${lastnum}" ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f "${allnumsbut},${lastname}" ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f "${allnames}" ${file}.csv
 
         # REGEX
-        test-script csvcut_${file}_all csvcut -f/./ ${file}.csv
-        test-script csvcut_${file}_all csvcut -f/^${firstname}/,2- ${file}.csv
-        test-script csvcut_${file}_all csvcut -f/^${firstname^^}/i,2- ${file}.csv
-        test-script csvcut_${file}_all csvcut -f/^${firstname,,}/i,2- ${file}.csv
-        test-script csvcut_${file}_all csvcut -f1-$((lastnum-1)),/$lastname/ ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f/./ ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f/^${firstname}/,2- ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f/^${firstname^^}/i,2- ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f/^${firstname,,}/i,2- ${file}.csv
+        test-script csvcut_${file}_all${extrasuffix} csvcut ${extraopts} -f1-$((lastnum-1)),/$lastname/ ${file}.csv
 
         # COLNUM, COLNAME
-        test-script csvcut_${file}_one csvcut -f ${lastnum} ${file}.csv
-        test-script csvcut_${file}_one csvcut -f "${lastname}" ${file}.csv
-        test-script csvcut_${file}_one csvcut --fields=${lastnum} ${file}.csv
-        test-script csvcut_${file}_one csvcut --fields="${lastname}" ${file}.csv
+        test-script csvcut_${file}_one${extrasuffix} csvcut ${extraopts} -f ${lastnum} ${file}.csv
+        test-script csvcut_${file}_one${extrasuffix} csvcut ${extraopts} -f "${lastname}" ${file}.csv
+        test-script csvcut_${file}_one${extrasuffix} csvcut ${extraopts} --fields=${lastnum} ${file}.csv
+        test-script csvcut_${file}_one${extrasuffix} csvcut ${extraopts} --fields="${lastname}" ${file}.csv
 
         # -COLNUM
         if [[ "$file" == "complex" ]]; then
@@ -164,8 +166,8 @@ function test-csvcut() {
         else
             suffix="one"
         fi
-        test-script csvcut_${file}_${suffix} csvcut -f-1 ${file}.csv
-        test-script csvcut_${file}_${suffix} csvcut --fields=-1 ${file}.csv
+        test-script csvcut_${file}_${suffix}${extrasuffix} csvcut ${extraopts} -f-1 ${file}.csv
+        test-script csvcut_${file}_${suffix}${extrasuffix} csvcut ${extraopts} --fields=-1 ${file}.csv
     done
 }
 
@@ -233,6 +235,7 @@ function main() {
 
     test-csvalign
     test-csvcut
+    test-csvcut "_inv" "-v"
     test-csvread
 }
 

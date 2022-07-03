@@ -152,12 +152,23 @@ DESCRIPTION
        csvcut extract columns and values from a comma-separated value (csv) file FILE.
 
    Options
-       -h, --help
-              Output a usage message and exit.
+       -d DELIM, --delim=DELIM
+              Use DELIM as the value delimiter, where DELIM may be 'p' for the pipe (|), 't'
+              for the tab (\t), 'a' for the SOH (ASCII 1), or other string literal of one or
+              more characters and Python string escape sequences.  DELIM may include escape
+              characters.  By default the delimiter is guessed from the characters in the
+              CSV_DELIMS environment variable.
 
        -f FIELDS, --fields=FIELDS
-              FIELDS  is  a  comma-separated  list of columns or values to select from the csv
+              FIELDS is a comma-separated list of columns or values to select from the csv
               file.  See Selector Format below on how to select column(s) or value(s).
+
+       -m, --multitable
+              The file may contain more than one csv table, divided by an empty line.  The
+              second set of table is treated as though it were the start of a new csv file.
+
+       -v, --inverse
+              Extract non-matching fields only.
 
    Selector Format
        INT    An integer select the column by its number.  The leftmost column is 1.
