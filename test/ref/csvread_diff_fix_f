@@ -1,0 +1,40 @@
+8    BeginString  : FIX.4.1
+9    BodyLength   : 108
+35   MsgType      : D .. NewOrderSingle
+34   MsgSeqNum    : 5
+49   SenderCompID : BANZAI
+52   SendingTime  : 20121105-23:25:12
+56   TargetCompID : EXEC
+11   ClOrdID      : 1352157912357
+21   HandlInst    : 1 .. AutomatedExecutionNoIntervention
+38   OrderQty     : 10000
+40   OrdType      : 2 .. Limit
+44   Price        : 10
+54   Side         : 1 .. Buy
+55   Symbol       : SPY
+59   TimeInForce  : 0 .. Day
+10   CheckSum     : 003
+                  : 
+
+9    BodyLength   : 112
+35   MsgType      : G .. OrderCancelReplaceRequest
+34   MsgSeqNum    : 6
+52   SendingTime  : 20121105-23:25:16
+11   ClOrdID      : 1352157916437
+41   OrigClOrdID  : 1352157912357
+38   OrderQty     : 12000
+44   Price        : 10.01
+10   CheckSum     : 198
+59   TimeInForce  : 
+
+9    BodyLength   : 104
+35   MsgType      : F .. OrderCancelRequest
+34   MsgSeqNum    : 7
+52   SendingTime  : 20121105-23:25:25
+11   ClOrdID      : 1352157925309
+38   OrderQty     : 10000
+10   CheckSum     : 197
+21   HandlInst    : 
+40   OrdType      : 
+44   Price        : 
+

@@ -215,6 +215,16 @@ function test-csvread() {
         test-script csvread_fix csvread -ntfix fixmessages.$ext
         test-script csvread_fix csvread --no-header --translator=fix fixmessages.$ext
     done
+
+    for ext in csv psv tsv; do
+        test-script csvread_diff_f csvread --diff-only diff-order.$ext
+        test-script csvread_diff_g csvread --show-change diff-order.$ext
+    done
+
+    for ext in csv psv raw; do
+        test-script csvread_diff_fix_f csvread -ntfix -f diff-fixmessages.$ext
+        test-script csvread_diff_fix_g csvread -ntfix -g diff-fixmessages.$ext
+    done
 }
 
 

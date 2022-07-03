@@ -1,0 +1,32 @@
+ID        : 1001
+TIMESTAMP : "2012-11-05 18:25:12"
+EVENT     : ENTRY
+SYMBOL    : MSFT
+QTY       : 100
+SIDE      : B
+LIMIT     : 300.0
+TEXT      : 
+ACCOUNT   : 12345
+
+ID        : 1001                  => 1002
+TIMESTAMP : "2012-11-05 18:25:12" => "2012-11-05 18:25:13"
+EVENT     : ENTRY                 => AMEND
+LIMIT     : 300.0                 => 300.01
+TEXT      :                       => "Going
+                                     Aggressive"
+
+ID        : 1002                  => 1003
+TIMESTAMP : "2012-11-05 18:25:13" => "2012-11-05 18:25:14"
+QTY       : 100                   => 200
+TEXT      : "Going                => "Get some more"
+            Aggressive"              
+ACCOUNT   : 12345                 => 12346
+
+ID        : 1003                  => 1004
+TIMESTAMP : "2012-11-05 18:25:14" => "2012-11-05 18:25:15"
+EVENT     : AMEND                 => CANCEL
+TEXT      : "Get some more"       => "Done
+                                     for
+                                     day"
+ACCOUNT   : 12346                 => 
+
