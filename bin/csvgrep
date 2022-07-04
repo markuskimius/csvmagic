@@ -265,9 +265,11 @@ def csvgrep(file, fields, pattern):
 
         # Select the cells
         for selector in fields:
-            selected = selector.select(selectable, strip=opts.strip)
+            candidates += selector.select(selectable, strip=opts.strip)
 
-            candidates.extend(selected)
+        # No candidate = test against a blank
+        if not candidates:
+            candidates += [ '' ]
 
         # Test the cells
         for candidate in candidates:

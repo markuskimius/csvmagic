@@ -27,7 +27,8 @@ function result() {
 function test-script() {
     local reference="${REFDIR}/${1}" && shift
     local exitcode=0
-    local width=70
+    local cw=70
+    local rw=32
 
     if ! [[ -e "$reference" ]]; then
         echo "$reference does not exist, generating..."
@@ -35,11 +36,11 @@ function test-script() {
         "$@" > "$reference"
     fi
 
-    printf "%-*s" $width "$* ... "
+    printf "%-*s => %-*s ... " $cw "$*" $rw "$reference"
     if diff "$reference" <("$@" 2>&1) >&/dev/null; then
         result green "PASS"
     else
-        result red "FAIL" "$reference"
+        result red "FAIL"
         exitcode=1
     fi
 
@@ -230,6 +231,63 @@ function test-csvread() {
 }
 
 
+function test-csvgrep() {
+    local -A opts=(
+        [_]=""
+        [_]="-i"
+        [_k]="-k"
+        [_n]="-n"
+        [_v]="-v"
+    )
+    local -A patterns=(
+        [_]=""
+        [_dot]="."
+        [_not]="notinanyfile"
+        [_blank]="^$"
+    )
+    local ok
+
+    for ok in "${!opts[@]}"; do
+        local opt=${opts[${ok}]}
+        local pk
+
+        for pk in "${!patterns[@]}"; do
+            local pattern=${patterns[${pk}]}
+            local fields
+
+            # All of these fields should be equivalent
+            for fields in "" "-f1-" "-f/./"; do
+                test-script csvgrep_empty${ok}${pk}    csvgrep    $opt $fields "$pattern" empty.csv
+                test-script csvgrep_typical${ok}${pk}  csvgrep    $opt $fields "$pattern" typical.csv
+                test-script csvgrep_complex${ok}${pk}  csvgrep    $opt $fields "$pattern" complex.csv
+                test-script csvgrep_complex${ok}m${pk} csvgrep -m $opt $fields "$pattern" complex.csv
+            done
+        done
+    done
+
+    opts=(
+        [_]=""
+        [_v]="-v"
+        [_i]="-i"
+        [_iv]="-iv"
+        [_ik]="-ik"
+        [_ivk]="-ivk"
+    )
+
+    for ok in "${!opts[@]}"; do
+        local opt=${opts[${ok}]}
+
+        test-script csvgrep_typical${ok}_email  csvgrep    $opt -f/email/i '^JDOE@EMAIL.COM$' typical.csv
+        test-script csvgrep_complex${ok}_email  csvgrep    $opt -f/email/i '^JDOE@EMAIL.COM$' complex.csv
+        test-script csvgrep_complex${ok}m_email csvgrep -m $opt -f/email/i '^JDOE@EMAIL.COM$' complex.csv
+
+        test-script csvgrep_typical${ok}_badisin  csvgrep    $opt -fISIN '^JDOE@EMAIL.COM$' typical.csv
+        test-script csvgrep_complex${ok}_badisin  csvgrep    $opt -fISIN '^JDOE@EMAIL.COM$' complex.csv
+        test-script csvgrep_complex${ok}m_badisin csvgrep -m $opt -fISIN '^JDOE@EMAIL.COM$' complex.csv
+    done
+}
+
+
 function main() {
     cd "$BASEDIR"
 
@@ -237,6 +295,7 @@ function main() {
     test-csvcut
     test-csvcut "_inv" "-v"
     test-csvread
+    test-csvgrep
 }
 
 
