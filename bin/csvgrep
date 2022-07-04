@@ -1,0 +1,474 @@
+#!/bin/sh
+
+##############################################################################
+# Find matching rows in a csv file.
+#
+
+##############################################################################
+# BOOTSTRAP
+#
+# Include ../lib in the search path before calling python.
+# (Thanks to https://unix.stackexchange.com/questions/20880)
+#
+if "true" : '''\'
+then
+    export PYTHONPATH="$(dirname $0)/../lib:$PYTHONPATH"
+    pythoncmd=python
+
+    if command -v python3 >/dev/null; then
+        pythoncmd=python3
+    fi
+
+    exec "$pythoncmd" "$0" "$@"
+    exit 127
+fi
+'''
+
+##############################################################################
+# PYTHON CODE BEGINS HERE
+
+import os
+import re
+import sys
+import errno
+import libcsv
+import getopts
+
+__copyright__ = 'Copyright 2019-2022 Mark Kim'
+__license__ = 'Apache 2.0'
+
+
+##############################################################################
+# GLOBALS
+
+SCRIPTNAME = os.path.basename(__file__)
+
+class opts:
+    pattern = None
+    file = None
+    delim = None
+    fields = None
+    has_header = True
+    ignorecase = False
+    multitable = False
+    strip = True
+    inverse = False
+
+
+##############################################################################
+# USAGE
+
+def usage():
+    '''\
+Find matching rows in a csv file.
+
+usage: {SCRIPTNAME} [OPTIONS] PATTERN [FILE]
+
+Options:
+  PATTERN               The match pattern.
+
+  FILE                  csv file to search.  If no file is specified, search
+                        from stdin.
+
+  -d, --delim=DELIM     Use DELIM as the value delimiter, where DELIM may be
+                        'p' for the pipe (|), 't' for the tab (\\t), 'a' for
+                        the SOH (ASCII 1), or other string literal of one or
+                        more characters and Python  string  escape  sequences.
+                        DELIM  may  include  escape characters.  By default the
+                        delimiter is guessed from the characters in the
+                        CSV_DELIMS environment variable.
+
+  -f, --fields=FIELDS   Column fields in to apply the PATTERN.  FIELDS is a
+                        comma separated list of field criteria.  Each criteria
+                        may be one of:
+
+                        * COLNUM:  The column number.  The first column is 1.
+                          The last column is -1.
+
+                        * COLNUM-[COLNUM]:  A range of columns, both inclusive.
+                          The first COLNUM must be a lower number than the
+                          second COLNUM.  If the second COLNUM is omitted, it
+                          is considered to the last column.
+
+                        * -:  A hyphen extracts all columns that has yet to be
+                          extracted by the prior criteria.
+
+                        * COLNAME:  The name of the column from the first row
+                          of the CSV file.  If the column name is invalid, a
+                          blank value is output.  The column name is assumed to
+                          be unique.
+
+                        * /REGEX/[MOD]:  The name of the column, using regex.
+                          All columns matching the REGEX are output.  REGEX
+                          cannot have a comma.  MOD is a modifier:
+                          
+                            i  case insensitive match.
+
+                        The order in which the criteria are specified is the
+                        order in which they are output.
+
+  -i, --ignore-case     Ignore case when matching the field.
+
+  -k, --keep-quotes     Keep any quotes surrounding the field value when testing
+                        PATTERN.  The default is to discard them.
+
+  -m, --multitable      Multitable support.  One csv file may include multiple
+                        csv data by separating them by an empty line.
+
+  -n, --no-header       The file contains no header.  Otherwise the first line
+                        is always matched.
+
+  -v, --inverse         Extract non-matching rows only.
+
+Environment Variables:
+  CSV_DELIMS            A set of characters used to guess the delimiter of a
+                        csv file.  The guesswork happens when reading  the
+                        first  line  of  the first FILE, by testing each
+                        character present in CSV_DELIMS for the character with
+                        the most occurrence in the line.  If any of the
+                        characters occur the same number  of  times  (including
+                        zero),  the  earlier  character  in the variable is
+                        chosen.  If the environment variable is not set, it
+                        defaults to '{libcsv.DELIMS}'.  CSV_DELIMS may include
+                        escape characters.
+'''
+
+    print(usage.__doc__.format(**globals()))
+
+
+##############################################################################
+# MAIN
+
+def main():
+    errcount = 0
+    args = []
+
+    getopt = getopts.getopts(sys.argv, {
+        'd' : 1, 'delim'       : 1,
+        'f' : 1, 'fields'      : 1,
+        'i' : 0, 'ignore-case' : 0,
+        'k' : 0, 'keep-quotes' : 0,
+        'm' : 0, 'multitable'  : 0,
+        'n' : 0, 'no-header'   : 0,
+        'v' : 0, 'inverse'     : 0,
+        'h' : 0, 'help'        : 0,
+    })
+
+    for c in getopt:
+        if c in ('-')                   : args.append(getopt.optarg)
+        elif c in ('d', 'delim')        : opts.delim = arg_to_delim(getopt.optarg)
+        elif c in ('f', 'fields')       : opts.fields = parse_fieldselector(getopt.optarg)
+        elif c in ('i', 'ignore-case')  : opts.ignorecase = True
+        elif c in ('k', 'keep-quotes')  : opts.strip = False
+        elif c in ('m', 'multitable')   : opts.multitable = True
+        elif c in ('n', 'no-header')    : opts.has_header = False
+        elif c in ('v', 'inverse')      : opts.inverse = True
+        elif c in ('h', 'help')         : usage(); sys.exit(0)
+        else                            : errcount += 1
+
+    if   len(args) == 0 : sys.stderr.write('Must specify PATTERN\n'); errcount += 1
+    elif len(args) == 1 : opts.pattern = args[0]; opts.file = '-'
+    elif len(args) == 2 : opts.pattern = args[0]; opts.file = args[1]
+    else                : sys.stderr.write('Too many arguments\n'); errcount += 1
+
+    # Sanity check
+    if errcount:
+        sys.stderr.write('Type `{SCRIPTNAME} --help` for help.\n'.format(**globals()))
+        sys.exit(1)
+
+    # If no fields are specified, match all fields
+    if opts.fields is None:
+        opts.fields = parse_fieldselector(r'/./')
+
+    # Read each file
+    with smart_open(opts.file) as fo:
+        csvgrep(fo, opts.fields, opts.pattern)
+
+
+def arg_to_delim(delim):
+    # Delimiter shorthands
+    if delim in ('p'): delim = '|'
+    elif delim in ('t'): delim = '\t'
+    elif delim in ('a'): delim = '\u0001'
+
+    # Translate escape characters
+    decoded = delim.encode().decode('unicode_escape')
+
+    # Use the decoded string only if it's a single character
+    if len(delim) == 1 or len(decoded) == 1:
+        delim = decoded
+
+    return delim
+
+
+def parse_fieldselector(string):
+    parts = string.split(',')
+    field_r = r'^((?P<COLNO>[-+]?[0-9]+)|(?P<RANGE>(?P<START>[-+]?[0-9]+)[-](?P<END>([-+]?[0-9]+)?))|[/](?P<REGEX>([^\\/]|\\.)+)[/](?P<MOD>[i]*)|(?P<REST>[-])|=(?P<COLNAME>.+))$'
+    field_rc = re.compile(field_r)
+
+    for i, p in enumerate(parts):
+        match = field_rc.search(p)
+
+        if not match:
+            parts[i] = FieldSelectorByColumnName(p)
+        elif match.group('COLNO'):
+            value = match.group('COLNO')
+            parts[i] = FieldSelectorByColumnNumber(int(value))
+        elif match.group('RANGE'):
+            start = None if match.group('START') == '' else int(match.group('START'))
+            end = None if match.group('END') == '' else int(match.group('END'))
+            parts[i] = FieldSelectorByColumnRange(start, end)
+        elif match.group('REGEX'):
+            regex = match.group('REGEX')
+            mod = match.group('MOD')
+            parts[i] = FieldSelectorByColumnRegex(regex, mod)
+        elif match.group('COLNAME'):
+            value = match.group('COLNAME')
+            parts[i] = FieldSelectorByColumnName(value)
+        elif match.group('REST'):
+            parts[i] = FieldSelectorByUnselected()
+        else:
+            parts[i] = FieldSelectorByColumnName(p)
+
+    return parts
+
+
+def smart_open(filename, mode='r'):
+    '''Open a file for reading, treating '-' as a stdin or stdout, depending on
+    the mode.'''
+
+    if filename == '-':
+        # Duplicate stdin/stdout so the caller can close it without closing stdin.
+        fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
+        fo = os.fdopen(os.dup(fd))
+    else:
+        fo = open(filename, mode)
+
+    return fo
+
+
+def csvgrep(file, fields, pattern):
+    reader = RowIterator(file, opts.delim)
+    flags = opts.ignorecase and re.I or 0
+    pattern_re = re.compile(pattern, flags)
+
+    for row in reader:
+        selectable = FieldSelectableRow(row)
+        delim = row.delim()
+        candidates = []
+        ismatch = False
+
+        # Empty row in a multitable
+        if len(row) == 0 and opts.multitable:
+            print()
+            continue
+
+        # Select the cells
+        for selector in fields:
+            selected = selector.select(selectable, strip=opts.strip)
+
+            candidates.extend(selected)
+
+        # Test the cells
+        for candidate in candidates:
+            if candidate is None:
+                candidate = ''
+
+            if pattern_re.search(candidate):
+                ismatch = True
+                break
+
+        # Inverse the match
+        if opts.inverse:
+            ismatch = not ismatch
+
+        # Always output the header
+        if opts.has_header and row.rownum() == 0:
+            ismatch = True
+
+        # Output if a match
+        if ismatch:
+            print(row)
+
+
+class RowIterator(object):
+    def __init__(self, file, delim):
+        self.__reader = libcsv.Reader(file, delim=delim, has_header=True, is_multitable=opts.multitable)
+
+    def __iter__(self):
+        got_header = False
+
+        while True:
+            if got_header:
+                row = next(self.__reader)
+            else:
+                row = self.__reader.header()
+                got_header = True
+
+            if row is None:
+                break
+            elif len(row) == 0 and opts.multitable:
+                got_header = False
+
+            yield row
+
+    def header(self):
+        return self.__reader.header()
+
+
+class FieldSelectableRow(object):
+    def __init__(self, row):
+        self.__row = row
+        self.__selected = []
+
+    def __len__(self):
+        return len(self.__row)
+
+    def __iter__(self):
+        for cell in self.__row:
+            yield cell.value()
+
+    def header(self):
+        colnames = []
+
+        for cell in self.__row.header():
+            colnames.append(cell.value())
+
+        return colnames
+
+    def select(self, key, default=None, strip=False):
+        if isinstance(key, int) and key > 0:
+            key -= 1
+        elif isinstance(key, int):
+            key = None
+
+        cell = None if key is None else self.__row[key]
+        value = None if cell is None else cell.stripped() if strip else cell.value()
+
+        if cell is not None:
+            self.__selected.append(cell.colnum())
+
+        return value
+
+    def unselected(self):
+        unselected = []
+
+        for cell in self.__row:
+            index = cell.colnum()
+
+            if index not in self.__selected:
+                value = cell.value()
+                self.__selected.append(index)
+
+                if value is None:
+                    value = ''
+
+                unselected.append(value)
+
+        return unselected
+
+
+class FieldSelector(object):
+    class InvalidSelectorException(Exception): pass
+
+    def select(self, row, strip=False):
+        return []
+
+
+class FieldSelectorByColumnNumber(FieldSelector):
+    def __init__(self, index):
+        self.__index = index
+
+    def select(self, row, strip=False):
+        colcount = len(row)
+        index = self.__index
+
+        if index <= 0:
+            index += colcount + 1
+
+        value = row.select(index, '', strip=strip)
+
+        return [value]
+
+
+class FieldSelectorByColumnName(FieldSelector):
+    def __init__(self, key):
+        self.__key = key
+
+    def select(self, row, strip=False):
+        try:
+            value = row.select(self.__key, '', strip=strip)
+        except ValueError as e:
+            # raise FieldSelector.InvalidSelectorException('Invalid column -- "%s"' % self.__key)
+            value = ''
+
+        return [value]
+
+
+class FieldSelectorByColumnRegex(FieldSelector):
+    def __init__(self, regex, mod):
+        if mod: regex = ('(?%s)' % mod) + regex
+
+        self.__regex_rc = re.compile(regex)
+
+    def select(self, row, strip=False):
+        selected = []
+        colnums = []
+
+        # Column regexes to indeces
+        for i, name in enumerate(row.header()):
+            if self.__regex_rc.search(name):
+                colnums.append(i+1)
+
+        for index in colnums:
+            selected.append(row.select(index, '', strip=strip))
+
+        return selected
+
+
+class FieldSelectorByColumnRange(FieldSelector):
+    def __init__(self, start, end):
+        self.__start = start
+        self.__end = end
+
+    def select(self, row, strip=False):
+        colcount = len(row)
+        start = self.__start
+        end = self.__end
+        step = 1
+        values = []
+
+        if start is None: start = 1
+        elif start <= 0:  start += colcount + 1
+
+        if end is None: end = colcount
+        elif end <= 0:  end += colcount + 1
+
+        # if start > end: step = -1
+
+        for i in range(start, end+step, step):
+            value = row.select(i, strip=False)
+
+            if value is not None:
+                values.append(value)
+
+        return values
+
+
+class FieldSelectorByUnselected(FieldSelector):
+    def select(self, row, strip=False):
+        return row.unselected()
+
+
+##############################################################################
+# ENTRY POINT
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('')
+        sys.exit(errno.EOWNERDEAD)
+
+
+# vim:ft=python

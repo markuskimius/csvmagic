@@ -151,7 +151,7 @@ NAME
        csvread - print csv rows in a more human-readable format
 
 SYNOPSIS
-       csvread [-h] [-n] [-s] [-d DELIM] [-t LIB] [FILE [FILE ...]]
+       csvread [-d DELIM] [-f] [-g] [-m] [-n] [-s] [-t LIB] [FILE [FILE ...]]
 
 DESCRIPTION
        csvread  displays  a  comma-separated value (csv) file FILE in a more readable format.  It

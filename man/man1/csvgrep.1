@@ -1,8 +1,8 @@
-.TH CSVCUT 1 "12 January 2020"
+.TH CSVGREP 1 "03 July 2022"
 .SH NAME
-csvcut \- extract columns and values from a comma\-separated value (csv) file(s).
+csvgrep \- find matching rows in a comma\-separated value (csv) file.
 .SH SYNOPSIS
-\fBcsvcut\fP [\-d \fIDELIM\fP] [\-f \fIFIELDS\fP] [\-m] [\-v] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvgrep\fP [\-d \fIDELIM\fP] [\-f \fIFIELDS\fP] [\-i] [\-k] [\-m] [\-n] [\-v] \fIPATTERN\fP [\fIFILE\fP]
 .SH DESCRIPTION
 \fBcsvcut\fP extract columns and values from a comma\-separated value (csv)
 file \fIFILE\fP.
@@ -17,13 +17,23 @@ delimiter is guessed from the characters in the \fBCSV_DELIMS\fP environment
 variable.
 .TP
 \fB-f\fP \fIFIELDS\fP, \fB--fields\fP=\fIFIELDS\fP
-\fIFIELDS\fP is a comma-separated list of columns or values to select from the
-csv file.  See \fBSelector Format\fP below on how to select column(s) or
-value(s).
+\fIFIELDS\fP is a comma-separated list of columns in the csv file in which to
+match \fIPATTERN\fP.  The default is to look in all columns.  See \fBSelector
+Format\fP below on how to select column(s).
+.TP
+\fB-i\fP, \fB--ignore-case\fP
+Ignore case when matching the field.
+.TP
+\fB-k\fP, \fB--keep-quotes\fP
+Keep any quotes surrounding the field value when testing \fIPATTERN\fP.  The
+default is to discard them.
 .TP
 \fB-m\fP, \fB--multitable\fP
 The file may contain more than one csv table, divided by an empty line.  The
 second set of table is treated as though it were the start of a new csv file.
+.TP
+\fB-n\fP, \fB--no-header\fP
+The file contains no header.  Otherwise the first line is always matched.
 .TP
 \fB-v\fP, \fB--inverse\fP
 Extract non-matching fields only.
@@ -44,10 +54,6 @@ Select the column by its name.  The string may be prefixed by the equal sign
 Select all columns whose name matches the regular expression \fBREGEX\fP.  The
 \fBi\fP modifier forces case-insensitive match.
 .TP
-\fB~/REGEX/[i]\fP
-Select all field values matching the regular expression \fBREGEX\fP.  The
-\fBi\fP modifier forces case-insensitive match.
-.TP
 \fB-\fP
 Select all fields that have not already been selected.
 .TP
@@ -63,4 +69,4 @@ times (including zero), the earlier character in the variable is chosen.
 If the environment variable is not set, it defaults to ',\\t|\\u0001'.
 \fBCSV_DELIMS\fP may include escape characters.
 .SH "SEE ALSO"
-csvgrep(1), csvread(1), csvalign(1), csvsql(1), csvcsv(1)
+csvcut(1), csvread(1), csvalign(1), csvsql(1), csvcsv(1)

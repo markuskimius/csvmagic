@@ -146,7 +146,7 @@ NAME
        csvcut - rearrange columns of a csv file or selectively display cell values
 
 SYNOPSIS
-       csvcut [-h] [-f FIELDS] [-d DELIM] [FILE [FILE ...]]
+       csvcut [-d DELIM] [-f FIELDS] [-m] [-v] [FILE [FILE ...]]
 
 DESCRIPTION
        csvcut extract columns and values from a comma-separated value (csv) file FILE.

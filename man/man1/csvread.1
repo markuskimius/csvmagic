@@ -2,7 +2,7 @@
 .SH NAME
 csvread \- print csv rows in a more human\-readable format
 .SH SYNOPSIS
-\fBcsvread\fP [\-h] [\-n] [\-s] [\-d \fIDELIM\fP] [\-t \fILIB\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvread\fP [\-d \fIDELIM\fP] [\-f] [\-g] [\-m] [\-n] [\-s] [\-t \fILIB\fP] [\fIFILE\fP [\fIFILE\fP ...]]
 .SH DESCRIPTION
 \fBcsvread\fP displays a comma\-separated value (csv) file \fIFILE\fP in a more
 readable format.  It prints one value per line, prefixed by the column name.
@@ -58,4 +58,4 @@ If the environment variable is not set, it defaults to ',\\t|\\u0001'.
 \fBCSV_PLUGINS_PATH\fP
 A colon-separated list of directories in which the plugin library is searched.
 .SH "SEE ALSO"
-csvalign(1), csvcut(1), cgrep(1), csvsql(1), csvcsv(1)
+csvalign(1), csvcut(1), csvgrep(1), cgrep(1), csvsql(1), csvcsv(1)
