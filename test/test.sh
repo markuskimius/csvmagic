@@ -27,7 +27,7 @@ function result() {
 function test-script() {
     local reference="${REFDIR}/${1}" && shift
     local exitcode=0
-    local cw=70
+    local cw=64
     local rw=32
 
     if ! [[ -e "$reference" ]]; then
@@ -36,7 +36,7 @@ function test-script() {
         "$@" > "$reference"
     fi
 
-    printf "%-*s => %-*s ... " $cw "$*" $rw "$reference"
+    printf "%-*s => %-*s .. " $cw "$*" $rw "$reference"
     if diff "$reference" <("$@" 2>&1) >&/dev/null; then
         result green "PASS"
     else
