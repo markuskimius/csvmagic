@@ -4,7 +4,7 @@ A command line utility to grep csv rows by a field value.
 
 ## Motivation
 
-Although `grep` works fine for finding a row in a csv file, it is not easy to:
+Although `grep` typically works fine for finding a row in a csv file, it is not easy to:
 
 * Retain the header in the output.
 * Match only in a specific column(s).
