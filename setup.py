@@ -11,7 +11,7 @@ with open(path.join(SCRIPTDIR, "README.md"), encoding="utf-8") as f:
 setup(
                              name = "csvmagic",
                       description = "CSV Utilities",
-                          version = "1.0.0",
+                          version = "1.0.1",
                           license = "Apache 2.0",
                            author = "Mark Kim",
                      author_email = "markuskimius+py@gmail.com",
@@ -29,5 +29,5 @@ setup(
                                     ],
                          packages = find_packages("lib"),
                       package_dir = { "": "lib" },
-                         requires = [ "getopts" ],
+                 install_requires = [ "getopts" ],
 )
