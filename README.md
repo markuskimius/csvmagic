@@ -13,11 +13,6 @@ Command line utilities to work with csv files.
 
 ## Installation
 
-With pip:
-```
-pip install csvutils
-```
-
 With [dpm]:
 ```
 dpm install https://github.com/markuskimius/csvutils.git
