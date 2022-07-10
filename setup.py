@@ -9,7 +9,7 @@ with open(path.join(SCRIPTDIR, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-                             name = "csvutils",
+                             name = "csvmagic",
                       description = "CSV Utilities",
                           version = "1.0.0",
                           license = "Apache 2.0",
