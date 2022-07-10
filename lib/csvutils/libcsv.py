@@ -7,8 +7,10 @@ import os
 import re
 import sys
 
-__copyright__ = 'Copyright 2019 Mark Kim'
+__copyright__ = 'Copyright 2019-2022 Mark Kim'
 __license__ = 'Apache 2.0'
+__version__ = '1.0.0'
+__author__ = 'Mark Kim'
 
 
 ##############################################################################

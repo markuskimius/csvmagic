@@ -3,10 +3,12 @@
 https://github.com/markuskimius/csvutils
 """
 
-from libcsv import Cell
+from csvutils.libcsv import Cell
 
-__copyright__ = "Copyright 2018-2019 Mark Kim"
+__copyright__ = "Copyright 2018-2022 Mark Kim"
 __license__ = "Apache 2.0"
+__version__ = "1.0.0"
+__author__ = "Mark Kim"
 
 
 class Translator(object):

@@ -16,10 +16,6 @@ then
     export PYTHONPATH="$(dirname $0)/../plugins:$PYTHONPATH"
     pythoncmd=python
 
-    if [ -n "$CSV_PLUGINS_PATH" ]; then
-        export PYTHONPATH="$CSV_PLUGINS_PATH:$PYTHONPATH"
-    fi
-
     if command -v python3 >/dev/null; then
         pythoncmd=python3
     fi
@@ -35,19 +31,23 @@ fi
 import os
 import sys
 import errno
-import libcsv
 import getopts
 import importlib
+import pkg_resources
+from csvutils import libcsv
 from itertools import zip_longest
 
 __copyright__ = 'Copyright 2019-2022 Mark Kim'
 __license__ = 'Apache 2.0'
+__version__ = '1.0.0'
+__author__ = 'Mark Kim'
 
 
 ##############################################################################
 # GLOBALS
 
 SCRIPTNAME = os.path.basename(__file__)
+SCRIPTDIR = os.path.dirname(__file__)
 
 class opts:
     files = []
@@ -164,6 +164,17 @@ def main():
     for f in opts.files:
         with smart_open(f) as fo:
             csvread(fo)
+
+
+def setup_environ():
+    # Add plugin paths to sys.path
+    sys.path = [
+        os.path.join(SCRIPTDIR, '..', 'plugins'),
+        pkg_resources.resource_filename('csvutils', 'plugins'),
+    ] + sys.path
+
+    if 'CSV_PLUGINS_PATH' in os.environ:
+        sys.path = os.env['CSV_PLUGINS_PATH'].split(':') + sys.path
 
 
 def arg_to_delim(delim):
@@ -334,6 +345,8 @@ class DefaultTranslatorModule(object):
 # ENTRY POINT
 
 if __name__ == '__main__':
+    setup_environ()
+
     try:
         main()
     except KeyboardInterrupt:

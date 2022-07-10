@@ -121,9 +121,9 @@ output.
 
 As an example, csvread provides a plugin to translate [FIX] messages.  FIX
 messages do not have headers, so use the `-n` option along with the `-t` option
-to load the `fix` library in the `plugins` directory:
+to load the `fix` library that comes with csvutils:
 ```sh
-$ csvread -ntplugins/fix fixmessages.csv
+$ csvread -n -tfix fixmessages.csv
 ```
 ... which takes the following content in fixmessages.csv:
 ```
@@ -140,7 +140,8 @@ $ csvread -ntplugins/fix fixmessages.csv
 55   Symbol       : AMZN
 40   OrdType      : 1 .. Market
 ```
-To specify the library by its base name (without qualifying it by its path) set
+
+You can also pass the full path to the library without the `.py` suffix, or set
 the `CSV_PLUGINS_PATH` environment variable to the directory containing the
 plugins.
 
