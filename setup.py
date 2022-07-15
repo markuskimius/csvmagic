@@ -20,12 +20,22 @@ setup(
                  long_description = long_description,
     long_description_content_type = "text/markdown",
                           scripts = [
-                                        "bin/csvsql",
+                                        "bin/csvalign",
                                         "bin/csvcsv",
                                         "bin/csvcut",
-                                        "bin/csvalign",
                                         "bin/csvgrep",
                                         "bin/csvread",
+                                        "bin/csvsql",
+                                    ],
+                       data_files = [
+                                        ("man/man1", [
+                                            "man/man1/csvalign.1",
+                                            "man/man1/csvcsv.1",
+                                            "man/man1/csvcut.1",
+                                            "man/man1/csvgrep.1",
+                                            "man/man1/csvread.1",
+                                            "man/man1/csvsql.1",
+                                        ])
                                     ],
                          packages = find_packages("lib"),
                       package_dir = { "": "lib" },
