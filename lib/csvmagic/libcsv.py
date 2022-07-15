@@ -1,6 +1,6 @@
 """A csv library for Python.
 
-https://github.com/markuskimius/csvutils
+https://github.com/markuskimius/csvmagic
 """
 
 import os

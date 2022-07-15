@@ -1,6 +1,6 @@
 """A csv library for Python.
 
-https://github.com/markuskimius/csvutils
+https://github.com/markuskimius/csvmagic
 """
 
 __copyright__ = "Copyright 2019-2022 Mark Kim"

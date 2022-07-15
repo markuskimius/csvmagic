@@ -32,7 +32,7 @@ import re
 import sys
 import errno
 import getopts
-from csvutils import libcsv
+from csvmagic import libcsv
 
 __copyright__ = 'Copyright 2019-2022 Mark Kim'
 __license__ = 'Apache 2.0'

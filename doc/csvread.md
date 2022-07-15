@@ -121,7 +121,7 @@ output.
 
 As an example, csvread provides a plugin to translate [FIX] messages.  FIX
 messages do not have headers, so use the `-n` option along with the `-t` option
-to load the `fix` library that comes with csvutils:
+to load the `fix` library that comes with csvmagic:
 ```sh
 $ csvread -n -tfix fixmessages.csv
 ```

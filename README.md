@@ -1,4 +1,4 @@
-# csvutils
+# csvmagic
 Command line utilities to work with csv files.
 
 ## Contents
@@ -17,17 +17,16 @@ With pip:
 ```
 pip install csvmagic
 ```
-(sorry, csvutils was taken.)
 
 With [dpm]:
 ```
-dpm install https://github.com/markuskimius/csvutils.git
+dpm install https://github.com/markuskimius/csvmagic.git
 ```
 
 With git clone, after installing the dependencies with pip:
 ```
 pip install getopts
-git clone https://github.com/markuskimius/csvutils.git
+git clone https://github.com/markuskimius/csvmagic.git
 ```
 
 
@@ -35,11 +34,11 @@ git clone https://github.com/markuskimius/csvutils.git
 
 [Apache 2.0]
 
-[csvread]: https://github.com/markuskimius/csvutils/blob/master/doc/csvread.md
-[csvcut]: https://github.com/markuskimius/csvutils/blob/master/doc/csvcut.md
-[csvalign]: https://github.com/markuskimius/csvutils/blob/master/doc/csvalign.md
-[csvsql]: https://github.com/markuskimius/csvutils/blob/master/doc/csvsql.md
-[csvcsv]: https://github.com/markuskimius/csvutils/blob/master/doc/csvcsv.md
-[csvgrep]: https://github.com/markuskimius/csvutils/blob/master/doc/csvgrep.md
-[Apache 2.0]: <https://github.com/markuskimius/csvutils/blob/master/LICENSE>
+[csvread]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvread.md
+[csvcut]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvcut.md
+[csvalign]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvalign.md
+[csvsql]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvsql.md
+[csvcsv]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvcsv.md
+[csvgrep]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvgrep.md
+[Apache 2.0]: <https://github.com/markuskimius/csvmagic/blob/master/LICENSE>
 [dpm]: <https://github.com/markuskimius/dpm>

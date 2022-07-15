@@ -15,7 +15,7 @@ setup(
                           license = "Apache 2.0",
                            author = "Mark Kim",
                      author_email = "markuskimius+py@gmail.com",
-                              url = "https://github.com/markuskimius/csvutils",
+                              url = "https://github.com/markuskimius/csvmagic",
                          keywords = [ "csv", "text" ],
                  long_description = long_description,
     long_description_content_type = "text/markdown",

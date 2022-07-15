@@ -1,9 +1,9 @@
 """csv plugin for translating Financial Information eXchange (FIX) messages.
 
-https://github.com/markuskimius/csvutils
+https://github.com/markuskimius/csvmagic
 """
 
-from csvutils.libcsv import Cell
+from csvmagic.libcsv import Cell
 
 __copyright__ = "Copyright 2018-2022 Mark Kim"
 __license__ = "Apache 2.0"
