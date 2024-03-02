@@ -33,13 +33,13 @@ import sys
 import errno
 import getopts
 import importlib
-import pkg_resources
+import importlib_resources
 from csvmagic import libcsv
 from itertools import zip_longest
 
 __copyright__ = 'Copyright 2019-2022 Mark Kim'
 __license__ = 'Apache 2.0'
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 __author__ = 'Mark Kim'
 
 
@@ -170,7 +170,7 @@ def setup_environ():
     # Add plugin paths to sys.path
     sys.path = [
         os.path.join(SCRIPTDIR, '..', 'plugins'),
-        pkg_resources.resource_filename('csvmagic', 'plugins'),
+        os.path.join(importlib_resources.files('csvmagic'), 'plugins'),
     ] + sys.path
 
     if 'CSV_PLUGINS_PATH' in os.environ:
