@@ -1,6 +1,6 @@
 # csvmagic
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/markuskimius/csvmagic?include_prereleases&label=Pre-release)](https://github.com/markuskimius/csvmagic/releases)
+[![Release](https://img.shields.io/github/v/release/markuskimius/csvmagic?include_prereleases&label=Release)](https://github.com/markuskimius/csvmagic/releases)
 
 Command line utilities to work with csv files.
 
