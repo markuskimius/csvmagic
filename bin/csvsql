@@ -934,6 +934,7 @@ def smart_open(filename, mode='r'):
         fo = os.fdopen(os.dup(fd))
     else:
         fo = open(filename, mode, encoding='latin1')
+        sys.stdout.reconfigure(encoding='latin1')
 
     return fo
 

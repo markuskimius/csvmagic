@@ -11,7 +11,7 @@ with open(path.join(SCRIPTDIR, "README.md"), encoding="utf-8") as f:
 setup(
                              name = "csvmagic",
                       description = "CSV Utilities",
-                          version = "2.2.0",
+                          version = "2.2.1",
                           license = "Apache 2.0",
                            author = "Mark Kim",
                      author_email = "markuskimius+py@gmail.com",
