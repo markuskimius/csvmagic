@@ -244,7 +244,7 @@ def smart_open(filename, mode='r'):
         fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
         fo = os.fdopen(os.dup(fd))
     else:
-        fo = open(filename, mode, encoding=opts.encoding, errors='ignore')
+        fo = open(filename, mode, encoding=opts.encoding)
 
     return fo
 
