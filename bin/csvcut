@@ -36,7 +36,7 @@ from csvmagic import libcsv
 
 __copyright__ = 'Copyright 2019-2024 Mark Kim'
 __license__ = 'Apache 2.0'
-__version__ = '2.2.2'
+__version__ = '2.3.0'
 __author__ = 'Mark Kim'
 
 
@@ -51,6 +51,7 @@ class opts:
     fields = None
     multitable = False
     inverse = False
+    encoding = 'utf-8'
 
 
 ##############################################################################
@@ -109,6 +110,11 @@ Options:
 
   -v, --inverse         Extract non-matching fields only.
 
+  -e, --encoding=ENCODING
+                        Read the file using ENCODING. (Default={opts.encoding})
+
+  -V, --version         Print the version.
+
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a
                         csv file.  The guesswork happens when reading  the
@@ -125,6 +131,12 @@ Environment Variables:
     print(usage.__doc__.format(**globals()))
 
 
+def version():
+    '''{SCRIPTNAME} {__version__}'''
+
+    print(version.__doc__.format(**globals()))
+
+
 ##############################################################################
 # MAIN
 
@@ -136,6 +148,8 @@ def main():
         'f' : 1, 'fields'     : 1,
         'm' : 0, 'multitable' : 0,
         'v' : 0, 'inverse'    : 0,
+        'e' : 1, 'encoding'   : 1,
+        'V' : 0, 'version'    : 0,
         'h' : 0, 'help'       : 0,
     })
 
@@ -145,6 +159,8 @@ def main():
         elif c in ('f', 'fields')       : opts.fields = parse_fieldselector(getopt.optarg)
         elif c in ('m', 'multitable')   : opts.multitable = True
         elif c in ('v', 'inverse')      : opts.inverse = True
+        elif c in ('e', 'encoding')     : opts.encoding = getopt.optarg
+        elif c in ('V', 'version')      : version(); sys.exit(0)
         elif c in ('h', 'help')         : usage(); sys.exit(0)
         else                            : errcount += 1
 
@@ -228,8 +244,7 @@ def smart_open(filename, mode='r'):
         fd = sys.stdin.fileno() if 'r' in mode else sys.stdout.fileno()
         fo = os.fdopen(os.dup(fd))
     else:
-        fo = open(filename, mode, encoding='latin1')
-        sys.stdout.reconfigure(encoding='latin1')
+        fo = open(filename, mode, encoding=opts.encoding, errors='ignore')
 
     return fo
 
