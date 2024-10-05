@@ -111,9 +111,9 @@ Options:
   -v, --inverse         Extract non-matching fields only.
 
   -e, --encoding=ENCODING
-                        Read the file using ENCODING. (Default={opts.encoding})
+                        Use ENCODING encoding to read FILE. (Default={opts.encoding})
 
-  -V, --version         Print the version.
+  -V, --version         Display the version and exit.
 
 Environment Variables:
   CSV_DELIMS            A set of characters used to guess the delimiter of a

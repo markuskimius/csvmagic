@@ -85,9 +85,9 @@ Delimiter Control:
                         is to use the same delimiter as the input.
 
   -e, --encoding=ENCODING
-                        Read the file using ENCODING. (Default={opts.encoding})
+                        Use ENCODING encoding to read FILE. (Default={opts.encoding})
 
-  -V, --version         Print the version.
+  -V, --version         Display the version and exit.
 
 Quoting Control:
   -a, --autoquote       Quote all non-numeric values.
