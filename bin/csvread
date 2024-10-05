@@ -34,6 +34,7 @@ import errno
 import getopts
 import importlib
 import importlib_resources
+from wcwidth import wcswidth
 from csvmagic import libcsv
 from itertools import zip_longest
 
@@ -272,9 +273,9 @@ def csvread(file):
 
         # Calculate the width of the column names
         if has_name:
-            colwidth = max(len(cell.colname() or '') for cell in cell_list)
+            colwidth = max(wcswidth(cell.colname() or '') for cell in cell_list)
         else:
-            colwidth = len(str(len(cell_list)))
+            colwidth = wcswidth(str(len(cell_list)))
 
         # Calculate the width of the column values
         if opts.diff == 2 and lastrow:
@@ -322,7 +323,7 @@ def csvread(file):
 
 
 def width_of(multiline_text):
-    return max(len(line) for line in multiline_text.split('\n'))
+    return max(wcswidth(line) for line in multiline_text.split('\n'))
 
 
 def height_of(multiline_text):
@@ -341,14 +342,17 @@ def print_cell(colwidth, colname, valwidth, fromvalue, tovalue, is_firstrow):
         fromlines = []
 
     for i, line in enumerate(zip_longest(fromlines, tolines, fillvalue='')):
+        coffset = len(str(colname)) - wcswidth(str(colname))
+        voffset = len(str(line[0])) - wcswidth(str(line[0]))
+
         if showdiff and i == 0:
-            print('%-*s : %-*s => %s' % (colwidth, colname, valwidth, line[0], line[1]))
+            print('%-*s : %-*s => %s' % (colwidth+coffset, colname, valwidth+voffset, line[0], line[1]))
         elif showdiff:
-            print('%-*s   %-*s    %s' % (colwidth, '', valwidth, line[0], line[1]))
+            print('%-*s   %-*s    %s' % (colwidth+coffset, '', valwidth+voffset, line[0], line[1]))
         elif i == 0:
-            print('%-*s : %-*s'       % (colwidth, colname, valwidth, line[1]))
+            print('%-*s : %-*s'       % (colwidth+coffset, colname, valwidth+voffset, line[1]))
         else:
-            print('%-*s   %-*s'       % (colwidth, '', valwidth, line[1]))
+            print('%-*s   %-*s'       % (colwidth+coffset, '', valwidth+voffset, line[1]))
 
 
 class DefaultTranslatorModule(object):
