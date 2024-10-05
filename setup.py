@@ -41,6 +41,7 @@ setup(
                       package_dir = { "": "lib" },
                  install_requires = [
                                         "getopts",
+                                        "wcwidth",
                                         "importlib_resources",
                                     ],
 )

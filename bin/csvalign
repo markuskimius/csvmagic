@@ -32,6 +32,7 @@ import re
 import sys
 import errno
 import getopts
+from wcwidth import wcswidth
 from csvmagic import libcsv
 
 __copyright__ = 'Copyright 2020-2024 Mark Kim'
@@ -243,7 +244,7 @@ def csvalign(file, widths):
             else:
                 # Adjust the column width for the data in the cell
                 for v in mvalue:
-                    widths2[i] = min(widths2[i], -len(v))
+                    widths2[i] = min(widths2[i], -wcswidth(v))
 
                 # Adjust the column width for the column number
                 if opts.numbered:
@@ -300,7 +301,8 @@ def print_colnums(widths):
 def print_buffer(buffer, widths):
     for line in buffer:
         for i, value in enumerate(line):
-            w = widths[i]
+            w = int(widths[i])
+            w += wcswidth(value) - len(value)  # Adjust for double-width character
             f = ('%%%ss' % w)
 
             if i > 0:
