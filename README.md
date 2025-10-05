@@ -12,6 +12,7 @@ Command line utilities to work with csv files.
 - [csvalign] - Print a csv file with its columns aligned.
 - [csvsql] - Query one or more csv files.
 - [csvcsv] - Convert a csv file from one variant to another.
+- [csvjson] - Convert a csv file to json.
 
 
 ## Installation
@@ -43,5 +44,6 @@ git clone https://github.com/markuskimius/csvmagic.git
 [csvsql]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvsql.md
 [csvcsv]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvcsv.md
 [csvgrep]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvgrep.md
+[csvjson]: https://github.com/markuskimius/csvmagic/blob/master/doc/csvjson.md
 [Apache 2.0]: <https://github.com/markuskimius/csvmagic/blob/master/LICENSE>
 [dpm]: <https://github.com/markuskimius/dpm>
