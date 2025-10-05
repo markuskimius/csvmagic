@@ -11,7 +11,7 @@ with open(path.join(SCRIPTDIR, "README.md"), encoding="utf-8") as f:
 setup(
                              name = "csvmagic",
                       description = "CSV Utilities",
-                          version = "2.3.0",
+                          version = "2.4.0",
                           license = "Apache 2.0",
                            author = "Mark Kim",
                      author_email = "markuskimius+py@gmail.com",
@@ -25,6 +25,7 @@ setup(
                                         "bin/csvcut",
                                         "bin/csvgrep",
                                         "bin/csvread",
+                                        "bin/csvjson",
                                         "bin/csvsql",
                                     ],
                        data_files = [
@@ -34,6 +35,7 @@ setup(
                                             "man/man1/csvcut.1",
                                             "man/man1/csvgrep.1",
                                             "man/man1/csvread.1",
+                                            "man/man1/csvjson.1",
                                             "man/man1/csvsql.1",
                                         ])
                                     ],

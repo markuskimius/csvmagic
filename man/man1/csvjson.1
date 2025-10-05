@@ -1,17 +1,11 @@
-.TH CSVREAD 1 "8 October 2018"
+.TH CSVJSON 1 "5 October 2025"
 .SH NAME
-csvread \- print csv rows in a more human\-readable format
+csvjson \- convert csv to json
 .SH SYNOPSIS
-\fBcsvread\fP [\-d \fIDELIM\fP] [\-f] [\-g] [\-m] [\-n] [\-s] [\-t \fILIB\fP] [\fIFILE\fP [\fIFILE\fP ...]]
+\fBcsvjson\fP [\-d \fIDELIM\fP] [\-f] [\-g] [\-m] [\-n] [\-s] [\-t \fILIB\fP] [\fIFILE\fP [\fIFILE\fP ...]]
 .SH DESCRIPTION
-\fBcsvread\fP displays a comma\-separated value (csv) file \fIFILE\fP in a more
-readable format.  It prints one value per line, prefixed by the column name.
-An empty line is printed between the records to serve as the record separator.
-
-This purpose of this layout is to make it easier to associate each value with
-its column.  The layout can also be used to grep for a specific column or
-columns.  Its output can be piped to cgrep(1) to look for records containing a
-value in a specific column.
+\fBcsvjson\fP converts a comma\-separated value (csv) file \fIFILE\fP to json
+format.
 .SS Options
 .TP
 \fB-d\fP \fIDELIM\fP, \fB--delim\fP=\fIDELIM\fP
@@ -22,12 +16,6 @@ escape sequences.  \fIDELIM\fP may include escape characters.  By default the
 delimiter is guessed from the characters in the \fBCSV_DELIMS\fP environment
 variable.
 .TP
-\fB-f\fP, \fB--diff-only\fP
-Show only the fields that differ between each row.
-.TP
-\fB-g\fP, \fB--show-change\fP
-Show only the fields that differ between each row, and show how they changed.
-.TP
 \fB-m\fP, \fB--multitable\fP
 The file may contain more than one csv table, divided by an empty line.  The
 second set of table is treated as though it were the start of a new csv file.
@@ -35,6 +23,9 @@ second set of table is treated as though it were the start of a new csv file.
 \fB-n\fP, \fB--no-header\fP
 The file contains no header.  The values are numbered by their column positions
 instead.
+.TP
+\fB-S\fP, \fB--all-string\fP
+Treat all fields as string.
 .TP
 \fB-s\fP, \fB--strip-quotes\fP
 Strip quotes from field values.
@@ -64,4 +55,4 @@ If the environment variable is not set, it defaults to ',\\t|\\u0001'.
 \fBCSV_PLUGINS_PATH\fP
 A colon-separated list of directories in which the plugin library is searched.
 .SH "SEE ALSO"
-csvalign(1), csvcut(1), csvgrep(1), cgrep(1), csvsql(1), csvcsv(1), csvjson(1)
+csvalign(1), csvcut(1), csvgrep(1), cgrep(1), csvsql(1), csvcsv(1), csvread(1)
